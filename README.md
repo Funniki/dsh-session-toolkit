@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Funniki/dsh-session-toolkit"><img src="https://img.shields.io/badge/version-2.3.9-blue.svg?style=flat-square" alt="Version" /></a>
+  <a href="https://github.com/Funniki/dsh-session-toolkit"><img src="https://img.shields.io/badge/version-2.3.10-blue.svg?style=flat-square" alt="Version" /></a>
   <a href="https://github.com/deepseek-ai"><img src="https://img.shields.io/badge/DSH-compatible%20%3E%3D0.2.0-brightgreen.svg?style=flat-square" alt="DSH Compatibility" /></a>
   <a href="https://github.com/Funniki/dsh-session-toolkit"><img src="https://img.shields.io/github/stars/Funniki/dsh-session-toolkit?style=social" alt="GitHub stars" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg?style=flat-square" alt="License" /></a>
