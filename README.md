@@ -9,9 +9,10 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-2.3.9-blue.svg?style=flat-square" alt="Version" />
-  <img src="https://img.shields.io/badge/DSH-compatible%20%3E%3D0.2.0-brightgreen.svg?style=flat-square" alt="DSH Compatibility" />
-  <img src="https://img.shields.io/badge/license-MIT-green.svg?style=flat-square" alt="License" />
+  <a href="https://github.com/Funniki/dsh-session-toolkit"><img src="https://img.shields.io/badge/version-2.3.9-blue.svg?style=flat-square" alt="Version" /></a>
+  <a href="https://github.com/deepseek-ai"><img src="https://img.shields.io/badge/DSH-compatible%20%3E%3D0.2.0-brightgreen.svg?style=flat-square" alt="DSH Compatibility" /></a>
+  <a href="https://github.com/Funniki/dsh-session-toolkit"><img src="https://img.shields.io/github/stars/Funniki/dsh-session-toolkit?style=social" alt="GitHub stars" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg?style=flat-square" alt="License" /></a>
 </p>
 
 ---
@@ -39,24 +40,40 @@
 
 ---
 
-## 🚀 安装指引
+## 安装 / 更新
 
-### 方式一：下载 Release 导入（推荐）
+### 在 DeepSeek Harness 网页版或桌面版中安装
 
-1. 在 GitHub 仓库的 **[Releases](../../releases)** 页面下载最新的安装包 `dsh-session-toolkit-2.3.9.zip`。
-2. 解压到一个**固定且不会被删除**的本地目录（例如 `D:\dsh-plugins\dsh-session-toolkit`）。
-   > *注：DSH 采用软链接机制引用本地插件目录，安装后请勿移动或删除该文件夹。*
-3. 打开 DSH 界面 → 点击左下角 **插件（Plugins）** → **添加插件** → 选择 **「本地目录」**。
-4. 选中解压出来的插件根目录（包含 `package.json` 的文件夹），点击确定。
-5. 刷新 DSH 页面，在插件列表中即可看到 **「会话功能增强」**！
+在 **Add plugin** 向导的搜索框中填写 GitHub 仓库地址：
 
-### 方式二：命令行安装（极客推荐）
+```
+https://github.com/Funniki/dsh-session-toolkit
+```
 
-如果你习惯使用终端，可使用 DSH CLI 直接安装：
+然后点击 **Install**。
 
-```powershell
-# 将路径替换为你的实际解压路径
-dsh plugin --profile desktop add "C:\Users\<你的用户名>\dsh-plugins\dsh-session-toolkit"
+### 使用 `dsh` CLI 安装
+
+从 [DeepSeek Harness](https://github.com/deepseek-ai) 安装 `dsh-session-toolkit` 插件：
+
+```sh
+dsh plugin --profile desktop add https://github.com/Funniki/dsh-session-toolkit
+```
+
+或更新 `dsh-session-toolkit` 插件：
+
+```sh
+dsh plugin --profile desktop update dsh-session-toolkit@latest
+```
+
+然后刷新 DSH 页面或启动 Web UI。无需构建，也无需重启。
+
+### 本地源码安装（开发调试）
+
+如果你已克隆源码到本地，可直接通过本地源码目录挂载安装：
+
+```sh
+dsh plugin --profile desktop add ./plugin
 ```
 
 ---
