@@ -1,82 +1,103 @@
-# 会话功能增强（dsh-session-toolkit）— 单插件 · 五组件
+# ⚡ DeepSeek Harness - 会话功能增强套件 (Session Toolkit)
 
-**一个插件包（pack），里面三个组件**，结构与官方 `@deepseek-ai/dsh-experimental-session-search` 一致：插件列表里只出现一个条目「会话功能增强」，点开后「包含的组件」列出五个独立条目，每个组件保留自己原来的名称、描述和图标，并且可以单独开关。
+<p align="center">
+  <img src="icon.svg" width="96" height="96" alt="dsh-session-toolkit logo" />
+</p>
 
-| 组件（row id） | 组件包（name） | 显示名称 / 图标 |
-|---|---|---|
-| `archived-session-delete` | `dsh-archived-session-delete` | 删除已归档会话（原图标） |
-| `session-move` | `dsh-session-move` | 会话移动到工作区（原图标；v1.1.0 起支持热迁移：会话开着也能搬，搬完继续在新目录） |
-| `unsent-content-guard` | `dsh-unsent-content-guard` | 未发送内容备份（原图标） |
-| `auto-paste` | `dsh-auto-paste` | 长文本转附件（粘贴长文存 pastes/*.md|*.txt，卡片带开头预览） |
-| `session-history-search` | `dsh-session-history-search` | 会话历史搜索（中文关键词搜历史消息，小窗；原图标） |
+<p align="center">
+  <strong>专为 DeepSeek Harness 设计的多合一会话管理与输入增强插件包</strong>
+</p>
 
-## 结构
+<p align="center">
+  <img src="https://img.shields.io/badge/version-2.3.9-blue.svg?style=flat-square" alt="Version" />
+  <img src="https://img.shields.io/badge/DSH-compatible%20%3E%3D0.2.0-brightgreen.svg?style=flat-square" alt="DSH Compatibility" />
+  <img src="https://img.shields.io/badge/license-MIT-green.svg?style=flat-square" alt="License" />
+</p>
 
-```
-session-toolkit/plugin/          # pack 包：dsh-session-toolkit@2.0.0
-├── package.json                 # main 为空模块；dsh.bundle.patch 指向下面
-├── cordis.patch.yml             # 3 条 insert：每条 name 指向一个组件包
-├── lib/index.js                 # 空模块（pack 自身没有 plugin row）
-├── locale/{zh,en}.json          # pack 的显示名/描述（会话功能增强）
-└── icon.svg                     # pack 的图标（星芒）
-```
+---
 
-组件包本身**逐字节沿用原插件**（`archived-session-delete/plugin`、`session-workspace-move/plugin`、`unsent-content-guard/plugin`），它们作为 pack 的**依赖**安装进 profile（`node_modules`），但**不进入** `dsh.profile.bundles`——所以不会在插件列表里各占一个条目。
+## 📖 简介
 
-- Host：每条 row 加载对应组件包的 host 半边；
-- 浏览器：`client-modules` 按 Loader entry 扫描，每个组件包自己的 `dsh.client` 被加载（所以三个功能的界面代码都是原来的）；
-- 显示元数据：组件条目的 title/description/icon 由 `pluginPackages.metaOf(row.name, base)` 从**组件包自己**的 `locale/*.json` + `icon` 读取（与官方 session-search 的做法相同）；
-- 配置：每条 row 的 `config` 归各自组件（等价于原来三个插件各自的配置）。
+**dsh-session-toolkit** 是一个面向 [DeepSeek Harness](https://github.com/deepseek-ai) 的复合型功能增强套件（Bundle Pack）。
 
-## 加组件 / 减组件
+采用符合官方标准的 Cordis Bundle 架构：
+- 🎯 **干净整洁**：在 DSH 插件列表里**仅占用一个「会话功能增强」条目**，杜绝插件列表臃肿。
+- 🧩 **独立管理**：点开详情后，内置的 **5 大功能组件** 各自保留原版图标、名称与独立开关，随心启用。
+- 📦 **零额外依赖**：自带完整运行时依赖，无需配置复杂环境，开箱即用。
 
-加一个组件只要两步：
+---
 
-1. 把新组件包加进 profile 依赖（推荐和本包一样用 `link:` 本地包或 npm 包）；
-2. 在 `cordis.patch.yml` 的 `- insert:` 列表里追加一条：
+## ✨ 核心功能与入口一览
 
-```yaml
-    - id: <组件 row id>
-      name: '<组件包名>'
-      config: {}
-```
+| 模块组件 | 组件包名 | 核心功能 | 使用入口 |
+| :--- | :--- | :--- | :--- |
+| **🗑️ 删除已归档会话** | `dsh-archived-session-delete` | 彻底清理过期的归档会话，抹除日志与投影缓存 | 已归档会话悬停出现的红色删除按钮；或会话菜单「...」中的「删除已归档会话」 |
+| **🚚 会话移动到工作区** | `dsh-session-move` | 将当前会话平跨移动到另一个工作区。**支持热迁移**：会话进行中空闲时可直接搬迁，搬完在新工作区继续对话 | 会话菜单「...」中的「移动到工作区…」 |
+| **🛡️ 未发送内容备份** | `dsh-unsent-content-guard` | 自动保存输入框未发送的文本草稿与图片。切换会话或异常崩溃后一键恢复 | 输入框下方的「未发送备份」浮动胶囊 |
+| **📋 长文本转附件** | `dsh-auto-paste` | 粘贴大段文本（代码/日志/文档）时自动转存为 `pastes/*.md` 附件卡片，防止撑爆上下文和输入框 | 在输入框粘贴超长文本（500+ 字）时自动触发 |
+| **🔍 会话历史全文搜索** | `dsh-session-history-search` | 支持中文关键词模糊检索跨会话的历史发言，一键回溯定位 | 全局快捷键 `Ctrl+Shift+K` 或输入框下方的「搜索历史」小按钮 |
 
-然后重新安装/刷新本 pack（或重启 DSH），「包含的组件」就会多一项；组件包自己的 `locale/*.json` + `icon.svg` 决定它的显示名称、描述和图标。
+---
 
-移除组件：删除该行 + 从 profile 依赖中移除该包。
+## 🚀 安装指引
 
-## 当前安装状态（v2.0.0）
+### 方式一：下载 Release 导入（推荐）
 
-- ✅ `dsh-session-toolkit@2.0.0` 已安装（`application: applied`）
-- profile `dsh.profile.bundles` 中本套件只有 `dsh-session-toolkit` 一项
-- profile `dependencies` 含三个组件包（`link:` 指向各自源码目录）——这是 pack 的组件依赖，不是独立插件
-- 插件列表应显示：**会话功能增强**（1 个条目）→ 包含的组件：**3 个**（删除已归档会话 / 会话移动到工作区 / 未发送内容备份，各自原图标）
+1. 在 GitHub 仓库的 **[Releases](../../releases)** 页面下载最新的安装包 `dsh-session-toolkit-2.3.9.zip`。
+2. 解压到一个**固定且不会被删除**的本地目录（例如 `D:\dsh-plugins\dsh-session-toolkit`）。
+   > *注：DSH 采用软链接机制引用本地插件目录，安装后请勿移动或删除该文件夹。*
+3. 打开 DSH 界面 → 点击左下角 **插件（Plugins）** → **添加插件** → 选择 **「本地目录」**。
+4. 选中解压出来的插件根目录（包含 `package.json` 的文件夹），点击确定。
+5. 刷新 DSH 页面，在插件列表中即可看到 **「会话功能增强」**！
 
-## 验证
+### 方式二：命令行安装（极客推荐）
 
-- Loader 行：`archived-session-delete`、`session-workspace-move`、`unsent-content-guard` 三条 entry 均存在（`Config.listConfigs` 可查）；
-- 会话菜单 slot：`move-to-workspace`(410)、`delete-archived-session`(440) active；行悬停删除、输入框备份胶囊 active；
-- 组件浏览器半已加载：迁移 probe `render`、未发送备份 probe `activate` + `capture-text` 持续写入；
-- 数据目录不变：`~/.dsh/unsent-content/`、`~/.dsh/session-workspace-move/` 原样保留；
-- 显示元数据：pack 自身「会话功能增强」+ 组件各自原名称/图标（`verify-display-meta.cjs` 检查 pack 元数据；组件元数据由各自包的 locale/icon 决定，与原来一致）。
-
-详见 [`verification/README.md`](../verification/README.md)。
-
-## 已知边界（继承原插件）
-
-- 打开过的会话不能即时移动：排队，重启 DSH 后完成；
-- 删除归档会话不可恢复（删日志、投影缓存、工作区记账、归档标记）；
-- 未发送备份在发送成功后清理、切换/重启后恢复；
-- 三者都只支持当前 DSH 会话格式 v4。
-
-## 分发给其他人
-
-打包（会自动把 `components/` 同步到 `node_modules/`，再生成 zip）：
+如果你习惯使用终端，可使用 DSH CLI 直接安装：
 
 ```powershell
-node tools/build-dist.cjs
+# 将路径替换为你的实际解压路径
+dsh plugin --profile desktop add "C:\Users\<你的用户名>\dsh-plugins\dsh-session-toolkit"
 ```
 
-产物：[dist/dsh-session-toolkit-2.0.0.zip](dist/dsh-session-toolkit-2.0.0.zip)（约 55 KB，自包含：三个组件已放在包内 `node_modules/`，收件人不需要任何额外依赖或 profile 改动）。
+---
 
-收件人安装步骤见压缩包里的 `安装说明.md`：解压到固定目录 → DSH 插件页「添加插件 → 本地目录」选中解压出的文件夹 → 刷新。注意目录不能移动/删除（DSH 以链接方式安装本地目录）。
+## 🛠️ 项目结构与本地构建
+
+```
+session-toolkit/
+├── plugin/                      # 插件核心源码包
+│   ├── components/              # 5 个内置独立组件的源码
+│   ├── cordis.patch.yml         # 核心 patch 编排描述文件
+│   ├── lib/index.js             # 入口模块
+│   ├── locale/{zh,en}.json      # 中英文国际化多语言
+│   └── icon.svg                 # 套件主图标
+├── tools/
+│   └── build-dist.cjs           # 一键打包与产物生成脚本
+├── verification/                # 自动化测试与迁移验证工具
+└── README.md                    # 项目说明文档
+```
+
+### 构建分发包
+
+在本项目根目录下运行打包脚本，会自动同步依赖并生成开箱即用的分发 zip 包：
+
+```bash
+node tools/build-dist.cjs
+```
+打包成功后，可在 `dist/` 目录下找到新生成的自包含压缩包。
+
+---
+
+## 📌 注意事项与已知边界
+
+1. **不可逆删除**：删除归档会话属于永久抹除操作，无法找回，请谨慎操作。
+2. **热迁移时机**：会话热迁移建议在 Agent 处于非运行（空闲）状态下操作。若有正在执行的任务，建议等待执行完毕或排队等待重启后自动完成迁移。
+3. **版本兼容**：本套件组件均适配 DSH 当前的会话格式（v4 协议）。
+
+---
+
+## 🤝 贡献与致谢
+
+欢迎提交 Issue 反馈问题或提出新功能建议！如果你也编写了实用的 DSH 组件，欢迎提交 Pull Request 将其整合到此套件中。
+
+- 遵循 **MIT License** 开源。
