@@ -1,7 +1,7 @@
-# ⚡ DeepSeek Harness - 会话功能增强套件 (Session Toolkit)
+# ⚡ DeepSeek Harness - 会话功能增强套件 (@funniki/dsh-session-toolkit)
 
 <p align="center">
-  <img src="plugin/icon.svg" width="96" height="96" alt="dsh-session-toolkit logo" />
+  <img src="icon.svg" width="96" height="96" alt="dsh-session-toolkit logo" />
 </p>
 
 <p align="center">
@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/Funniki/dsh-session-toolkit"><img src="https://img.shields.io/badge/version-2.3.10-blue.svg?style=flat-square" alt="Version" /></a>
+  <a href="https://github.com/Funniki/dsh-session-toolkit"><img src="https://img.shields.io/badge/version-3.0.0-blue.svg?style=flat-square" alt="Version" /></a>
   <a href="https://github.com/deepseek-ai"><img src="https://img.shields.io/badge/DSH-compatible%20%3E%3D0.2.0-brightgreen.svg?style=flat-square" alt="DSH Compatibility" /></a>
   <a href="https://github.com/Funniki/dsh-session-toolkit"><img src="https://img.shields.io/github/stars/Funniki/dsh-session-toolkit?style=social" alt="GitHub stars" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg?style=flat-square" alt="License" /></a>
@@ -19,12 +19,12 @@
 
 ## 📖 简介
 
-**dsh-session-toolkit** 是一个面向 [DeepSeek Harness](https://github.com/deepseek-ai) 的复合型功能增强套件（Bundle Pack）。
+**@funniki/dsh-session-toolkit** 是一个面向 [DeepSeek Harness](https://github.com/deepseek-ai) 的复合型功能增强套件（Bundle Pack）。
 
-采用符合官方标准的 Cordis Bundle 架构：
+采用符合官方标准的 Cordis 复合架构：
 - 🎯 **干净整洁**：在 DSH 插件列表里**仅占用一个「会话功能增强」条目**，杜绝插件列表臃肿。
 - 🧩 **独立管理**：点开详情后，内置的 **5 大功能组件** 各自保留原版图标、名称与独立开关，随心启用。
-- 📦 **零额外依赖**：自带完整运行时依赖，无需配置复杂环境，开箱即用。
+- 📦 **免手动软链**：自研组件基于相对路径直接挂载，免去手动配置 junction 或外部依赖的烦恼，即装即用。
 
 ---
 
@@ -44,36 +44,49 @@
 
 ### 在 DeepSeek Harness 网页版或桌面版中安装
 
-在 **Add plugin** 向导的搜索框中填写 GitHub 仓库地址：
+在 **Add plugin**（添加插件）向导的搜索框中：
 
-```
-https://github.com/Funniki/dsh-session-toolkit
-```
+- **方式一（GitHub 直接安装，推荐）**：填写本仓库地址
+  ```
+  https://github.com/Funniki/dsh-session-toolkit
+  ```
+- **方式二（npm 官方包名安装）**：
+  ```
+  @funniki/dsh-session-toolkit
+  ```
 
-然后点击 **Install**。
+点击 **Install** 即可自动完成安装与依赖解析。
+
+---
 
 ### 使用 `dsh` CLI 安装
 
-从 [DeepSeek Harness](https://github.com/deepseek-ai) 安装 `dsh-session-toolkit` 插件：
+从 [DeepSeek Harness](https://github.com/deepseek-ai) 终端安装插件：
 
 ```sh
+# 通过 GitHub 仓库一键安装
 dsh plugin --profile desktop add https://github.com/Funniki/dsh-session-toolkit
+
+# 或通过 npm 包名安装
+dsh plugin --profile desktop add @funniki/dsh-session-toolkit
 ```
 
-或更新 `dsh-session-toolkit` 插件：
+更新插件：
 
 ```sh
-dsh plugin --profile desktop update dsh-session-toolkit@latest
+dsh plugin --profile desktop update @funniki/dsh-session-toolkit
 ```
 
-然后刷新 DSH 页面或启动 Web UI。无需构建，也无需重启。
+安装完成后刷新 DSH 页面或启动 Web UI 即可生效。无需编译构建，也无需重启客户端。
 
-### 本地源码安装（开发调试）
+---
 
-如果你已克隆源码到本地，可直接通过本地源码目录挂载安装：
+### 本地源码安装（开发者调试）
+
+如果你已克隆源码到本地，直接在仓库根目录下执行：
 
 ```sh
-dsh plugin --profile desktop add ./plugin
+dsh plugin --profile desktop add .
 ```
 
 ---
@@ -82,26 +95,30 @@ dsh plugin --profile desktop add ./plugin
 
 ```
 session-toolkit/
-├── plugin/                      # 插件核心源码包
-│   ├── components/              # 5 个内置独立组件的源码
-│   ├── cordis.patch.yml         # 核心 patch 编排描述文件
-│   ├── lib/index.js             # 入口模块
-│   ├── locale/{zh,en}.json      # 中英文国际化多语言
-│   └── icon.svg                 # 套件主图标
-├── tools/
-│   └── build-dist.cjs           # 一键打包与产物生成脚本
+├── package.json                 # 根级清单，声明 @funniki/dsh-session-toolkit
+├── cordis.patch.yml             # 核心 patch 编排，通过相对路径聚合 5 大组件
+├── components/                  # 5 个内置独立组件的源码
+│   ├── dsh-archived-session-delete/
+│   ├── dsh-session-move/
+│   ├── dsh-unsent-content-guard/
+│   ├── dsh-session-history-search/
+│   └── dsh-auto-paste/
+├── lib/index.js                 # 顶层入口模块
+├── locale/{zh,en}.json          # 中英文国际化多语言
+├── icon.svg                     # 套件主图标
+├── tools/build-dist.cjs         # 离线自包含 Zip 打包脚本
 ├── verification/                # 自动化测试与迁移验证工具
 └── README.md                    # 项目说明文档
 ```
 
-### 构建分发包
+### 构建离线分发包
 
-在本项目根目录下运行打包脚本，会自动同步依赖并生成开箱即用的分发 zip 包：
+在本项目根目录下运行打包脚本，会自动生成极致瘦身的离线分发 zip 包：
 
 ```bash
 node tools/build-dist.cjs
 ```
-打包成功后，可在 `dist/` 目录下找到新生成的自包含压缩包。
+产物位于 `dist/dsh-session-toolkit-3.0.0.zip`（~330 KB）。
 
 ---
 

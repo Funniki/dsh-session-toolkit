@@ -11,3 +11,5 @@ dist/stage/
 verification/*.log
 .DS_Store
 Thumbs.db
+
+*.tgz

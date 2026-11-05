@@ -9,7 +9,7 @@ import path from 'node:path';
 import os from 'node:os';
 import zlib from 'node:zlib';
 
-const host = await import('file:///C:/Users/G1enn/Documents/deepseek-harness/default-workspace/session-toolkit/plugin/components/dsh-session-move/lib/host.js');
+const host = await import('file:///C:/Users/G1enn/Documents/deepseek-harness/default-workspace/session-toolkit/components/dsh-session-move/lib/host.js');
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'dsh-session-move-test-'));
 const root = path.join(tmp, 'sessions');

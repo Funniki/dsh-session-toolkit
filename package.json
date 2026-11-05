@@ -1,0 +1,45 @@
+{
+  "name": "@funniki/dsh-session-toolkit",
+  "version": "3.0.0",
+  "description": "Handier Session management for DeepSeek Harness: delete archived Sessions, move a Session to another Workspace, back up unsent composer text and images, search past messages by keyword (Chinese supported), and paste long text as a file. 会话功能增强五件套。",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "main": "./lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib",
+    "components",
+    "cordis.patch.yml",
+    "locale",
+    "icon.svg",
+    "PACK-README.md"
+  ],
+  "dependencies": {
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.5",
+    "@deepseek-ai/dsh-typert-protocol": "0.2.1-rc.5",
+    "@deepseek-ai/schemastery": "~3.18.5"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "dsh-plugin",
+    "session"
+  ]
+}

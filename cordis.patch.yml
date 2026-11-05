@@ -1,0 +1,24 @@
+# Bundle patch: one plugin pack with five components.
+#
+# Each row is a RELATIVE path anchored beside this file, so the components ship
+# inside this package and resolve wherever the package is installed — no profile
+# level dependency wiring, no junction, no bare-name lookup. That is what makes
+# an npm install of this package self-contained.
+- insert:
+    - id: archived-session-delete
+      name: './components/dsh-archived-session-delete'
+      config: {}
+    - id: session-move
+      name: './components/dsh-session-move'
+      config: {}
+    - id: unsent-content-guard
+      name: './components/dsh-unsent-content-guard'
+      config: {}
+    - id: session-history-search
+      name: './components/dsh-session-history-search'
+      config: {}
+    - id: auto-paste
+      name: './components/dsh-auto-paste'
+      config:
+        minChars: 500
+        maxBytes: 1048576

@@ -1,6 +1,6 @@
 # 🔬 验证与测试报告：会话功能增强套件 (Session Toolkit)
 
-本文档记录 **dsh-session-toolkit (v2.3.10)** 的架构设计、各内置组件加载状态、自动化测试用例及迁移验证证据。
+本文档记录 **@funniki/dsh-session-toolkit (v3.0.0)** 的架构设计、各内置组件加载状态、自动化测试用例及迁移验证证据。
 
 验证基准环境：DeepSeek Harness (DSH) `>= 0.2.1`（V4 会话日志格式协议）。
 

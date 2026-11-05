@@ -12,7 +12,7 @@ const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 
 const ROOT = path.resolve(__dirname, "..");
-const PLUGIN = path.join(ROOT, "plugin");
+const PLUGIN = ROOT;
 const COMPONENTS = path.join(PLUGIN, "components");
 const DIST = path.join(ROOT, "dist");
 const STAGE_NAME = "dsh-session-toolkit";
@@ -24,7 +24,7 @@ const zipPath = path.join(DIST, `${STAGE_NAME}-${version}.zip`);
 
 function copyDir(from, to) {
 	fs.rmSync(to, { recursive: true, force: true });
-	fs.cpSync(from, to, { recursive: true });
+	fs.cpSync(from, to, { recursive: true, dereference: true });
 }
 
 /**
@@ -99,7 +99,7 @@ function copyRuntimeTree(from, to) {
 		return true;
 	};
 	fs.rmSync(to, { recursive: true, force: true });
-	fs.cpSync(from, to, { recursive: true, filter: keep });
+	fs.cpSync(from, to, { recursive: true, dereference: true, filter: keep });
 	if (dropped.length > 0) console.log(`dropped unused vendored packages: ${dropped.join(", ")}`);
 }
 
