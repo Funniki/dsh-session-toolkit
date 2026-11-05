@@ -1,28 +1,30 @@
 # Bundle patch: one plugin pack with five components.
 #
-# Each row is a RELATIVE path anchored beside this file, pointing at the
-# component's host entry module. ESM cannot import a directory, so the entry
-# file is named explicitly; the loader finds each component's own package.json
-# (and therefore its `dsh.client` browser half) from that file's location.
+# Each row is a SUBPATH of this package. That shape is what keeps both halves of
+# a component working after an npm install:
 #
-# Relative rows are what make an npm install of this package self-contained: the
-# components ship inside the tarball and resolve wherever it is unpacked, with no
-# profile-level dependency wiring and no junction.
+# - the host half resolves to the component's entry module through `exports`;
+# - the plugin page still has a package specifier, so it reads the component's
+#   own `locale/*.json` and `icon` (exported per component) for the display
+#   title, description and icon instead of showing a raw module path.
+#
+# An absolute `file:` row also loads, but `readPluginMeta` skips non-package
+# specifiers entirely, which is why those rows lost their names and icons.
 - insert:
     - id: archived-session-delete
-      name: './components/dsh-archived-session-delete/lib/host.js'
+      name: '@funniki/dsh-session-toolkit/components/dsh-archived-session-delete'
       config: {}
     - id: session-move
-      name: './components/dsh-session-move/lib/host.js'
+      name: '@funniki/dsh-session-toolkit/components/dsh-session-move'
       config: {}
     - id: unsent-content-guard
-      name: './components/dsh-unsent-content-guard/lib/host-v106.js'
+      name: '@funniki/dsh-session-toolkit/components/dsh-unsent-content-guard'
       config: {}
     - id: session-history-search
-      name: './components/dsh-session-history-search/lib/host.js'
+      name: '@funniki/dsh-session-toolkit/components/dsh-session-history-search'
       config: {}
     - id: auto-paste
-      name: './components/dsh-auto-paste/dist/index.js'
+      name: '@funniki/dsh-session-toolkit/components/dsh-auto-paste'
       config:
         minChars: 500
         maxBytes: 1048576
