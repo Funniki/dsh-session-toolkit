@@ -1,0 +1,62 @@
+{
+  "at": "2026-10-28T08:30:00.782Z",
+  "passed": 11,
+  "failed": 0,
+  "results": [
+    {
+      "step": "parse-real-logs",
+      "ok": true,
+      "detail": "3/3 parsed"
+    },
+    {
+      "step": "workspaces",
+      "ok": true,
+      "detail": "2 usable workspaces"
+    },
+    {
+      "step": "attach-source",
+      "ok": true,
+      "detail": "C:\\Users\\G1enn\\Documents\\deepseek-harness\\dawei-fragrance-workspace"
+    },
+    {
+      "step": "targets-route",
+      "ok": true,
+      "detail": "1 targets"
+    },
+    {
+      "step": "move-route",
+      "ok": true,
+      "detail": "status=200"
+    },
+    {
+      "step": "target-accounting",
+      "ok": true,
+      "detail": "C:\\Users\\G1enn\\Documents\\deepseek-harness\\default-workspace"
+    },
+    {
+      "step": "source-released",
+      "ok": true,
+      "detail": "C:\\Users\\G1enn\\Documents\\deepseek-harness\\dawei-fragrance-workspace"
+    },
+    {
+      "step": "header-cwd",
+      "ok": true,
+      "detail": "C:\\Users\\G1enn\\Documents\\deepseek-harness\\default-workspace"
+    },
+    {
+      "step": "move-back",
+      "ok": true,
+      "detail": "C:\\Users\\G1enn\\Documents\\deepseek-harness\\default-workspace -> C:\\Users\\G1enn\\Documents\\deepseek-harness\\dawei-fragrance-workspace"
+    },
+    {
+      "step": "header-back",
+      "ok": true,
+      "detail": "C:\\Users\\G1enn\\Documents\\deepseek-harness\\dawei-fragrance-workspace"
+    },
+    {
+      "step": "cleanup",
+      "ok": true,
+      "detail": "throwaway session removed"
+    }
+  ]
+}

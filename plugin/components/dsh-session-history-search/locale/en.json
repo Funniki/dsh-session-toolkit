@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Session History Search",
+    "description": "Keyword search across past Session messages with Chinese substring support; results show context snippets and open the matching Session."
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Paste to Attachment",
+    "description": "Long pastes are saved as workspace attachments under pastes/ (.md when the text looks like Markdown, otherwise .txt); the composer keeps one reference card with a short preview."
+  }
+}

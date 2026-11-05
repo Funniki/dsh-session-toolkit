@@ -1,0 +1,42 @@
+{
+  "name": "dsh-auto-paste",
+  "version": "1.1.1",
+  "private": true,
+  "description": "长文粘贴自动保存为工作区附件：检测内容自动选择 .md 或 .txt，输入框只留一张带开头预览的引用卡片。Forked from dsh-auto-paste 0.3.2 (MIT, author misakamaster) and adapted as a dsh-session-toolkit component.",
+  "license": "MIT",
+  "author": "misakamaster",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sakuraqqq/dsh-auto-paste.git"
+  },
+  "type": "module",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./client": "./dist/client.js",
+    "./typert": "./dist/typert.host.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "dsh": {
+    "client": {
+      "platform": "web",
+      "inject": [
+        "sessions",
+        "connection"
+      ]
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Move Session to Workspace",
+    "description": "Move a stored Session to another Workspace from its “...” menu: the session id and full history are preserved, with backup, verification, rollback, and a restart-retry queue for resident sessions."
+  }
+}

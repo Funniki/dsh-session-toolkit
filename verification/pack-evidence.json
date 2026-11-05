@@ -1,0 +1,15 @@
+{
+  "generatedAt": "2026-10-28T09:10:00Z",
+  "pack": {"name": "dsh-session-toolkit", "version": "2.0.0", "bundle": true, "enabled": true},
+  "componentPackages": [
+    {"name": "dsh-archived-session-delete", "version": "1.1.2", "dsh.bundle": false, "installedFrom": "session-toolkit/plugin/components/dsh-archived-session-delete"},
+    {"name": "dsh-session-workspace-move", "version": "1.0.3", "dsh.bundle": false, "installedFrom": "session-toolkit/plugin/components/dsh-session-workspace-move"},
+    {"name": "dsh-unsent-content-guard", "version": "1.0.7", "dsh.bundle": false, "installedFrom": "session-toolkit/plugin/components/dsh-unsent-content-guard"}
+  ],
+  "installedPluginsList": ["dsh-context", "dsh-deepseek-chat", "dsh-ego-browser", "dsh-ops(disabled)", "dsh-session-toolkit"],
+  "whyThreeSeparateEntriesAppeared": "readProfilePlugins lists every profile dependency whose installed package.json declares dsh.bundle.patch; the three component packages were previously installed directly from their own plugin dirs (bundles), so each appeared as its own disabled entry.",
+  "fix": "The components are installed from copies under session-toolkit/plugin/components/* whose package.json drops dsh.bundle (main + dsh.client + locale + icon kept). The pack patch owns the three loader rows, so components load but are not listed as plugins.",
+  "componentMetaIdenticalToOriginals": {"locale/zh.json": true, "locale/en.json": true, "icon.svg": true},
+  "loaderEntries": ["include:archived-session-delete", "include:session-workspace-move", "include:unsent-content-guard"],
+  "packPatchRows": 3
+}

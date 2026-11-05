@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Unsent Content Guard",
+    "description": "Backs up unsent composer text and image drafts to disk, and deletes a copy only after a successful send commits it."
+  }
+}

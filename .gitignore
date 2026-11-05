@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+plugin/node_modules/
+
+# Build artifacts & packages
+dist/*.zip
+dist/stage/
+
+# Logs & temp files
+*.log
+verification/*.log
+.DS_Store
+Thumbs.db

@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Session Enhancements",
+    "description": "Handier Session management: delete archived Sessions, move a Session to another Workspace, back up unsent composer text and images, and search past messages by keyword (Chinese supported)."
+  }
+}

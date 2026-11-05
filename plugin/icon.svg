@@ -1,0 +1,11 @@
+<svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="2.5" y="2.5" width="31" height="31" rx="9" fill="url(#session-enhancements-bg)" />
+  <path d="M17.5 8 L19.76 15.24 L27 17.5 L19.76 19.76 L17.5 27 L15.24 19.76 L8 17.5 L15.24 15.24 Z" fill="#FFFFFF" />
+  <path d="M26.5 21.3 L27.49 24.51 L30.7 25.5 L27.49 26.49 L26.5 29.7 L25.51 26.49 L22.3 25.5 L25.51 24.51 Z" fill="#FFFFFF" fill-opacity="0.92" />
+  <defs>
+    <linearGradient id="session-enhancements-bg" x1="2.5" y1="2.5" x2="33.5" y2="33.5" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#74B3FF" />
+      <stop offset="1" stop-color="#5560F2" />
+    </linearGradient>
+  </defs>
+</svg>
