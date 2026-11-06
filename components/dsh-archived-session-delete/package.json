@@ -1,6 +1,6 @@
 {
   "name": "@funniki/dsh-session-toolkit-archived-session-delete",
-  "version": "0.1.2",
+  "version": "0.1.2-alpha1",
   "description": "Delete archived Sessions from the sidebar: a red row hover button and a grouped Session-menu action, removing the stored Session log and its workspace accounting.",
   "license": "MIT",
   "author": "funniki",

@@ -1,6 +1,6 @@
 {
   "name": "@funniki/dsh-session-toolkit-session-history-search",
-  "version": "0.1.2",
+  "version": "0.1.2-alpha1",
   "description": "Keyword search across Session history messages, including Chinese substrings the built-in FTS index cannot match.",
   "license": "MIT",
   "author": "funniki",

@@ -1,5 +1,19 @@
 # 变更日志
 
+
+## 0.1.2-alpha1
+
+- **修复客户端模块 id**：五个浏览器半边把改名前的老包名硬编码成 `__ModuleLoader__.load({ id })`，
+  Host 按新包名找不到就换 URL 重试，第二次注册同一 id 抛「duplicate factory registration」，
+  整批客户端半边失效；修好后 id 与包名一致。
+- **修复未发送备份的恢复链路**：`handleList` 调用了不存在的 `store.pruneMissingFiles`，
+  导致每次 `/list` 都抛 TypeError —— 恢复流程第一步就失败，切会话后图片回不来。
+  同时把 `handleReadImage` 里不存在的 `removeByAttachmentIds` 换成 `removeCommitted`。
+- 新增 `verification/unsent-guard-host.test.mjs`：在进程内驱动真实的七个路由，
+  覆盖 save-image → list → read-image → discard 全链路（这条 bug 就是它抓出来的）。
+- 新增 POSIX 安装脚本 `install.sh`（macOS / Linux），与 `install.ps1` 等价；
+  构建审计强制要求两个脚本都存在且在 `files` 里。
+
 ## 0.1.1
 
 - pack 声明 `dependencies`：五个组件作为依赖一起装。profile 用 `nodeLinker: hoisted`，

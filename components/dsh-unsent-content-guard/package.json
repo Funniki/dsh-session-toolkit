@@ -1,6 +1,6 @@
 {
   "name": "@funniki/dsh-session-toolkit-unsent-content-guard",
-  "version": "0.1.2",
+  "version": "0.1.2-alpha1",
   "description": "Keeps a durable backup of unsent composer text and image drafts, removes a copy after a successful send, and restores unsent images a Session switch or a restart dropped.",
   "license": "MIT",
   "author": "funniki",
