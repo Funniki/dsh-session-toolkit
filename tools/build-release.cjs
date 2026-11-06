@@ -5,9 +5,11 @@
  * One command does the three things a release needs, in the only order that
  * keeps the package honest:
  *
- *   1. mirror `components/<pkg>` into `plugin/node_modules/<pkg>` — the pack
- *      ships those five copies and installs them as profile dependencies, so a
- *      stale copy is a broken install for whoever downloads the zip;
+ *   1. mirror every `components/<dir>` into `plugin/node_modules/<its package
+ *      name>` — the zip ships those five copies and installs them as profile
+ *      dependencies, so a stale copy is a broken install for whoever downloads
+ *      it (the package NAME decides the target path, which is why the scoped
+ *      names flow through here instead of the directory names);
  *   2. audit the result: the whole pack must carry zero third-party code (the
  *      2.3.x releases bundled a copy of the Harness core inside the pack, and
  *      two cores in one process is what killed every tool call);
@@ -28,15 +30,16 @@ const PLUGIN = path.join(ROOT, "plugin");
 const COMPONENTS = path.join(ROOT, "components");
 const DIST = path.join(ROOT, "dist");
 
-/** Node builtin prefixes a host half may import. */
+/** What a component's host half may import: Node builtins only. */
 const HOST_ALLOWED = /^node:/;
-/** Module ids a browser half may require: platform seeds and DSH client packages. */
+/** What a component's browser half may require: platform modules only. */
 const CLIENT_ALLOWED = /^(react|react\/jsx-runtime|@deepseek-ai\/dsh-client-[a-z-]+)$/;
+/** The pack's own name. */
+const PACK_NAME = "@funniki/dsh-session-toolkit";
 
 const errors = [];
-const notes = [];
 
-/** Read one JSON file. @param file - absolute path. @returns the parsed value. */
+/** @param file - absolute path. @returns the parsed JSON. */
 function readJson(file) {
 	return JSON.parse(fs.readFileSync(file, "utf8"));
 }
@@ -47,31 +50,63 @@ function packManifest() {
 }
 
 /**
- * Mirror every component source into the pack's bundled copies.
- * @returns the component package names, in directory order.
+ * Turn a package name into its path below `node_modules/`.
+ * @param name - bare or scoped package name.
+ * @returns the relative directory path.
  */
-function syncComponents() {
-	const names = fs
+function nodeModulesPath(name) {
+	return name.startsWith("@") ? path.join(...name.split("/")) : name;
+}
+
+/**
+ * Read every component source directory.
+ * @returns {{dir: string, name: string, version: string}[]} components, sorted by name.
+ */
+function components() {
+	return fs
 		.readdirSync(COMPONENTS, { withFileTypes: true })
 		.filter((entry) => entry.isDirectory())
-		.map((entry) => entry.name)
-		.sort();
-	const target = path.join(PLUGIN, "node_modules");
-	fs.mkdirSync(target, { recursive: true });
-	for (const name of names) {
-		const from = path.join(COMPONENTS, name);
-		const to = path.join(target, name);
-		fs.rmSync(to, { recursive: true, force: true });
-		fs.cpSync(from, to, { recursive: true });
-		notes.push(`synced ${name}`);
+		.map((entry) => {
+			const manifest = readJson(path.join(COMPONENTS, entry.name, "package.json"));
+			return { dir: entry.name, name: manifest.name, version: manifest.version };
+		})
+		.sort((left, right) => left.name.localeCompare(right.name));
+}
+
+/**
+ * Mirror every component into the pack's bundled copies, dropping copies this
+ * pack no longer ships (a rename would otherwise leave the old one behind).
+ * @param list - components from `components()`.
+ */
+function syncComponents(list) {
+	const bundled = path.join(PLUGIN, "node_modules");
+	fs.mkdirSync(bundled, { recursive: true });
+	const expected = new Set(list.map((component) => nodeModulesPath(component.name)));
+
+	for (const top of fs.readdirSync(bundled, { withFileTypes: true })) {
+		if (!top.isDirectory()) continue;
+		if (!top.name.startsWith("@")) {
+			if (!expected.has(top.name)) fs.rmSync(path.join(bundled, top.name), { recursive: true, force: true });
+			continue;
+		}
+		const scopeDir = path.join(bundled, top.name);
+		for (const child of fs.readdirSync(scopeDir, { withFileTypes: true })) {
+			const rel = path.join(top.name, child.name);
+			if (!expected.has(rel)) fs.rmSync(path.join(scopeDir, child.name), { recursive: true, force: true });
+		}
+		if (fs.readdirSync(scopeDir).length === 0) fs.rmSync(scopeDir, { recursive: true, force: true });
 	}
-	return names;
+
+	for (const component of list) {
+		const to = path.join(bundled, nodeModulesPath(component.name));
+		fs.rmSync(to, { recursive: true, force: true });
+		fs.cpSync(path.join(COMPONENTS, component.dir), to, { recursive: true });
+	}
 }
 
 /**
  * Drop comments so prose that mentions a module name cannot look like a real
- * import (the browser half documents reasons such as "…cannot tell 'never
- * installed' from 'reloading'" — those lines used to fail the audit).
+ * import (the browser halves document such reasons in prose).
  * @param source - file text.
  * @returns the text without block comments and whole-line `//` comments.
  */
@@ -98,12 +133,16 @@ function specifiersOf(source) {
 }
 
 /**
- * Audit one component's host and browser halves.
+ * Audit one component's manifest and both halves.
  * @param name - component package name.
  * @param dir - the component directory inside the pack.
  */
 function auditComponent(name, dir) {
 	const manifest = readJson(path.join(dir, "package.json"));
+	if (manifest.name !== name) errors.push(`${name}: bundled copy declares name ${JSON.stringify(manifest.name)}`);
+	if (manifest.license !== "MIT") errors.push(`${name}: license must be MIT (got ${JSON.stringify(manifest.license)})`);
+	if (manifest.publishConfig?.access !== "public") errors.push(`${name}: publishConfig.access must be "public"`);
+
 	const hostRel = manifest.main;
 	if (typeof hostRel !== "string") {
 		errors.push(`${name}: package.json declares no main (host half)`);
@@ -118,50 +157,63 @@ function auditComponent(name, dir) {
 			}
 		}
 	}
+
 	const clientRel = manifest.exports && manifest.exports["./client"];
-	const clientPath = typeof clientRel === "string" ? path.join(dir, clientRel) : undefined;
-	if (clientPath !== undefined) {
+	if (typeof clientRel === "string") {
+		const clientPath = path.join(dir, clientRel);
 		if (!fs.existsSync(clientPath)) errors.push(`${name}: browser half is missing at ${clientRel}`);
 		else {
 			for (const specifier of specifiersOf(fs.readFileSync(clientPath, "utf8"))) {
 				if (!CLIENT_ALLOWED.test(specifier)) {
-					errors.push(`${name}: browser half requires "${specifier}" — only react and @deepseek-ai/dsh-client-* are allowed`);
+					errors.push(
+						`${name}: browser half requires "${specifier}" — only react and @deepseek-ai/dsh-client-* are allowed`
+					);
 				}
 			}
 		}
 	}
-	if (manifest.license !== "MIT") errors.push(`${name}: license must be MIT (got ${JSON.stringify(manifest.license)})`);
 }
 
 /**
- * Assert the pack bundles nothing but its own components.
- * @param componentNames - the component package names.
+ * Assert the pack bundles nothing but its own components, and that its patch
+ * declares a row for each of them.
+ * @param list - components from `components()`.
  */
-function auditPack(componentNames) {
+function auditPack(list) {
 	const bundled = path.join(PLUGIN, "node_modules");
-	const entries = fs.readdirSync(bundled, { withFileTypes: true });
-	for (const entry of entries) {
-		if (!entry.isDirectory()) continue;
-		if (entry.name.startsWith("@")) {
-			errors.push(`pack bundles a scoped package (${entry.name}) — a second copy of a dependency inside the pack is exactly the 2.3.x failure mode`);
+	const expected = new Set(list.map((component) => nodeModulesPath(component.name)));
+	for (const top of fs.readdirSync(bundled, { withFileTypes: true })) {
+		if (!top.isDirectory()) continue;
+		if (top.name.startsWith("@")) {
+			for (const child of fs.readdirSync(path.join(bundled, top.name), { withFileTypes: true })) {
+				const rel = path.join(top.name, child.name).replace(/\\/g, "/");
+				if (!expected.has(path.join(top.name, child.name))) {
+					errors.push(`pack bundles an unexpected scoped package (${rel})`);
+				}
+			}
 			continue;
 		}
-		if (!componentNames.includes(entry.name)) {
-			errors.push(`pack bundles an unexpected package (${entry.name})`);
+		if (!expected.has(top.name)) errors.push(`pack bundles an unexpected package (${top.name})`);
+	}
+	for (const component of list) {
+		if (!fs.existsSync(path.join(bundled, nodeModulesPath(component.name), "package.json"))) {
+			errors.push(`pack is missing ${component.name}`);
 		}
 	}
+
 	const pack = packManifest();
+	if (pack.name !== PACK_NAME) errors.push(`pack: name must be ${PACK_NAME} (got ${JSON.stringify(pack.name)})`);
 	if (pack.license !== "MIT") errors.push(`pack: license must be MIT (got ${JSON.stringify(pack.license)})`);
 	if (pack.private === true) errors.push("pack: package.json is still private — it cannot be published");
+	if (pack.publishConfig?.access !== "public") errors.push('pack: publishConfig.access must be "public"');
 	if (pack.dependencies !== undefined) {
 		errors.push(`pack: declares dependencies ${JSON.stringify(pack.dependencies)} — the pack must be dependency-free`);
 	}
 	if (!fs.existsSync(path.join(PLUGIN, "LICENSE"))) errors.push("pack: LICENSE is missing");
+
 	const rows = fs.readFileSync(path.join(PLUGIN, "cordis.patch.yml"), "utf8");
-	for (const name of componentNames) {
-		if (!rows.includes(`name: '${name}'`) && !rows.includes(`name: "${name}"`) && !rows.includes(`name: ${name}`)) {
-			errors.push(`cordis.patch.yml declares no row for ${name}`);
-		}
+	for (const component of list) {
+		if (!rows.includes(component.name)) errors.push(`cordis.patch.yml declares no row for ${component.name}`);
 	}
 }
 
@@ -191,9 +243,7 @@ const CRC_TABLE = (() => {
 	const table = new Int32Array(256);
 	for (let index = 0; index < 256; index += 1) {
 		let value = index;
-		for (let bit = 0; bit < 8; bit += 1) {
-			value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
-		}
+		for (let bit = 0; bit < 8; bit += 1) value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
 		table[index] = value;
 	}
 	return table;
@@ -299,18 +349,21 @@ function writeZip(sourceDir, outFile) {
 
 function main() {
 	const checkOnly = process.argv.includes("--check");
-	const componentNames = syncComponents();
-	for (const name of componentNames) auditComponent(name, path.join(PLUGIN, "node_modules", name));
-	auditPack(componentNames);
+	const list = components();
+	syncComponents(list);
+	for (const component of list) {
+		auditComponent(component.name, path.join(PLUGIN, "node_modules", nodeModulesPath(component.name)));
+		console.log(`  synced ${component.name}@${component.version}`);
+	}
+	auditPack(list);
 
-	for (const note of notes) console.log(`  ${note}`);
 	console.log(`\naudit: ${errors.length === 0 ? "clean" : `${errors.length} problem(s)`}`);
 	for (const error of errors) console.error(`  ✗ ${error}`);
 	if (errors.length > 0) process.exit(1);
 
 	const pack = packManifest();
 	if (checkOnly) {
-		console.log(`\nchecked dsh-session-toolkit@${pack.version} (no archive written)`);
+		console.log(`\nchecked ${pack.name}@${pack.version} (no archive written)`);
 		return;
 	}
 	fs.mkdirSync(DIST, { recursive: true });

@@ -6,11 +6,11 @@
 
 | 组件 | 用途 |
 |---|---|
-| `dsh-archived-session-delete` | 永久删除已归档会话及其日志 |
-| `dsh-session-move` | 跨工作区移动会话，支持备份、校验、失败回滚及空闲会话热迁移 |
-| `dsh-unsent-content-guard` | 备份未发送的文字与图片 |
-| `dsh-session-history-search` | 按关键词搜索历史消息，支持中文 |
-| `dsh-auto-paste` | 将长文本保存为工作区中的 Markdown 或文本附件，并在输入框显示引用卡片 |
+| `@funniki/dsh-session-toolkit-archived-session-delete` | 永久删除已归档会话及其日志 |
+| `@funniki/dsh-session-toolkit-session-move` | 跨工作区移动会话，支持备份、校验、失败回滚及空闲会话热迁移 |
+| `@funniki/dsh-session-toolkit-unsent-content-guard` | 备份未发送的文字与图片 |
+| `@funniki/dsh-session-toolkit-session-history-search` | 按关键词搜索历史消息，支持中文 |
+| `@funniki/dsh-session-toolkit-auto-paste` | 将长文本保存为工作区中的 Markdown 或文本附件，并在输入框显示引用卡片 |
 
 ## 安装
 

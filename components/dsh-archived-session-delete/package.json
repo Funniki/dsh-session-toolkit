@@ -1,7 +1,13 @@
 {
-  "name": "dsh-archived-session-delete",
+  "name": "@funniki/dsh-session-toolkit-archived-session-delete",
   "version": "0.1.0",
   "description": "Delete archived Sessions from the sidebar: a red row hover button and a grouped Session-menu action, removing the stored Session log and its workspace accounting.",
+  "license": "MIT",
+  "author": "funniki",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Funniki/dsh-session-toolkit.git"
+  },
   "type": "module",
   "main": "lib/host.js",
   "exports": {
@@ -19,6 +25,9 @@
     "locale/*.json",
     "icon.svg"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "dsh": {
     "client": {
       "platform": "web",
@@ -28,6 +37,5 @@
         "@deepseek-ai/dsh-client-ui-workspace"
       ]
     }
-  },
-  "license": "MIT"
+  }
 }

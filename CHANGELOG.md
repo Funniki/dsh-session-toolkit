@@ -47,6 +47,9 @@ zip → 解压到固定目录 → `install.ps1`（内部是 6 次 `dsh plugin ad
   并审计三类回归（带作用域的依赖进包、宿主半边 import 非 `node:` 模块、
   浏览器半边 require 非平台模块）。
 - 补 `LICENSE`（MIT）与各包 `license` 字段，去掉 `private: true`。
+- 6 个包统一发布到 `@funniki` scope：`@funniki/dsh-session-toolkit` 加五个
+  `@funniki/dsh-session-toolkit-*`。行名跟着改成 scoped 名——裸名 `dsh-auto-paste`
+  会和上游同名插件撞车，而 bundle 行本来就按包名从 profile 根解析。
 
 ### 已知限制
 

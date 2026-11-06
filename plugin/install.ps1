@@ -1,17 +1,31 @@
 [CmdletBinding()]
 param(
-	[string]$Profile = "desktop"
+	[string]$Profile = "desktop",
+	[switch]$SkipChecks
 )
+
+# Installs dsh-session-toolkit and its five components into one DSH profile.
+#
+# Works for BOTH distribution channels from the same script:
+#   * extracted zip  — the five components sit in ./node_modules/ and are
+#                      installed from there (link:, keep this folder in place);
+#   * npm package    — no bundled copies are present, so the published
+#                      @funniki/dsh-session-toolkit-* names are installed from
+#                      the registry instead.
+#
+# Six installs are required either way: a bundle row resolves its `name` from the
+# PROFILE root, so the pack alone leaves all five rows unable to import.
 
 $ErrorActionPreference = "Stop"
 
 $pluginRoot = $PSScriptRoot
+$packName = "@funniki/dsh-session-toolkit"
 $components = @(
-	"dsh-archived-session-delete",
-	"dsh-session-move",
-	"dsh-unsent-content-guard",
-	"dsh-session-history-search",
-	"dsh-auto-paste"
+	"@funniki/dsh-session-toolkit-archived-session-delete",
+	"@funniki/dsh-session-toolkit-session-move",
+	"@funniki/dsh-session-toolkit-unsent-content-guard",
+	"@funniki/dsh-session-toolkit-session-history-search",
+	"@funniki/dsh-session-toolkit-auto-paste"
 )
 
 $dsh = @(
@@ -34,21 +48,34 @@ if (-not (Test-Path -LiteralPath (Join-Path $pluginRoot "package.json"))) {
 }
 
 function Add-ProfilePackage {
-	param([Parameter(Mandatory)][string]$Path)
-	Write-Host "Adding $Path"
-	& $dsh plugin --profile $Profile add $Path
+	param([Parameter(Mandatory)][string]$Target)
+	Write-Host "Adding $Target"
+	& $dsh plugin --profile $Profile add $Target
 	if ($LASTEXITCODE -ne 0) {
-		throw "dsh plugin add failed for $Path (exit $LASTEXITCODE)."
+		throw "dsh plugin add failed for $Target (exit $LASTEXITCODE)."
 	}
 }
 
-Add-ProfilePackage -Path $pluginRoot
+# The pack itself: this folder when it is a local package, the registry otherwise.
+if ((Get-Content -LiteralPath (Join-Path $pluginRoot "package.json") -Raw | ConvertFrom-Json).name -eq $packName) {
+	Add-ProfilePackage -Target $pluginRoot
+} else {
+	Add-ProfilePackage -Target $packName
+}
+
 foreach ($component in $components) {
-	$componentPath = Join-Path $pluginRoot "node_modules\$component"
-	if (-not (Test-Path -LiteralPath (Join-Path $componentPath "package.json"))) {
-		throw "Bundled component is missing: $componentPath"
+	$bundled = Join-Path $pluginRoot "node_modules/$component"
+	if (Test-Path -LiteralPath (Join-Path $bundled "package.json")) {
+		Add-ProfilePackage -Target $bundled
+	} else {
+		Add-ProfilePackage -Target $component
 	}
-	Add-ProfilePackage -Path $componentPath
+}
+
+if ($SkipChecks) {
+	Write-Host ""
+	Write-Host "Installed into profile '$Profile' (post-install checks skipped)."
+	return
 }
 
 $dshHome = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path $HOME ".dsh" }
@@ -62,8 +89,8 @@ if (-not (Test-Path -LiteralPath $profileManifestPath)) {
 
 $manifest = Get-Content -LiteralPath $profileManifestPath -Raw | ConvertFrom-Json
 $bundles = @($manifest.dsh.profile.bundles)
-if ($bundles -notcontains "dsh-session-toolkit") {
-	throw "Profile did not register dsh-session-toolkit as a bundle."
+if ($bundles -notcontains $packName) {
+	throw "Profile did not register $packName as a bundle."
 }
 foreach ($component in $components) {
 	if (-not $manifest.dependencies.PSObject.Properties[$component]) {
@@ -71,9 +98,10 @@ foreach ($component in $components) {
 	}
 }
 
-$topLevelTools = Join-Path $profileDir "node_modules\@deepseek-ai\dsh-tools"
-if (Test-Path -LiteralPath $topLevelTools) {
-	throw "Duplicate core package detected: $topLevelTools. Remove it before starting DSH."
+# The whole point of 0.1.0: no Harness core copy inside the profile.
+$duplicateCore = Join-Path $profileDir "node_modules\@deepseek-ai\dsh-tools"
+if (Test-Path -LiteralPath $duplicateCore) {
+	throw "Duplicate core package detected: $duplicateCore. Remove it before starting DSH."
 }
 if ((Test-Path -LiteralPath $lockfilePath) -and
 	((Get-Content -LiteralPath $lockfilePath -Raw) -match "(?m)^\s*'@deepseek-ai/dsh-tools@")) {
@@ -81,5 +109,5 @@ if ((Test-Path -LiteralPath $lockfilePath) -and
 }
 
 Write-Host ""
-Write-Host "Installed dsh-session-toolkit and all five components into profile '$Profile'."
+Write-Host "Installed $packName and all five components into profile '$Profile'."
 Write-Host "Restart DSH, or disable and re-enable the bundle in Plugins if it is already running."

@@ -1,24 +1,26 @@
 # Bundle patch: one plugin pack with five components.
 #
-# Each row names one original plugin package, so every component keeps its own
-# package display metadata (title, description, icon) and its own browser half.
-# The five component packages are installed as profile dependencies of this
-# pack (see README); they are not separate bundles.
+# Each row names one PUBLISHED component package, so every component keeps its
+# own display metadata (title, description, icon) and its own browser half.
+# The names are scoped on purpose: a bundle row resolves from the profile root,
+# and a bare `dsh-auto-paste` would collide with the upstream plugin of that
+# name. The five component packages are installed as profile dependencies of
+# this pack (install.ps1 does it); they are not separate bundles.
 - insert:
     - id: archived-session-delete
-      name: 'dsh-archived-session-delete'
+      name: '@funniki/dsh-session-toolkit-archived-session-delete'
       config: {}
     - id: session-move
-      name: 'dsh-session-move'
+      name: '@funniki/dsh-session-toolkit-session-move'
       config: {}
     - id: unsent-content-guard
-      name: 'dsh-unsent-content-guard'
+      name: '@funniki/dsh-session-toolkit-unsent-content-guard'
       config: {}
     - id: session-history-search
-      name: 'dsh-session-history-search'
+      name: '@funniki/dsh-session-toolkit-session-history-search'
       config: {}
     - id: auto-paste
-      name: 'dsh-auto-paste'
+      name: '@funniki/dsh-session-toolkit-auto-paste'
       config:
         minChars: 500
         maxBytes: 1048576

@@ -25,14 +25,14 @@ import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
+const PACK = '@funniki/dsh-session-toolkit'
 const COMPONENTS = [
-  'dsh-archived-session-delete',
-  'dsh-session-move',
-  'dsh-unsent-content-guard',
-  'dsh-session-history-search',
-  'dsh-auto-paste'
+  `${PACK}-archived-session-delete`,
+  `${PACK}-session-move`,
+  `${PACK}-unsent-content-guard`,
+  `${PACK}-session-history-search`,
+  `${PACK}-auto-paste`
 ]
-const PACK = 'dsh-session-toolkit'
 
 const argumentIndex = process.argv.indexOf('--profile')
 const profileName = argumentIndex >= 0 ? process.argv[argumentIndex + 1] : 'desktop'
@@ -77,9 +77,22 @@ for (const name of expected) {
 }
 
 const nodeModules = join(profileDir, 'node_modules')
-const stray = existsSync(nodeModules)
-	? readdirSync(nodeModules).filter((entry) => !entry.startsWith('.') && !expected.includes(entry))
-	: []
+// List what else lives at the profile root, understanding scope directories:
+// a scoped component sits at node_modules/@scope/name, not node_modules/name.
+const stray = []
+if (existsSync(nodeModules)) {
+	for (const entry of readdirSync(nodeModules)) {
+		if (entry.startsWith('.')) continue
+		if (entry.startsWith('@')) {
+			for (const child of readdirSync(join(nodeModules, entry))) {
+				const name = entry + '/' + child
+				if (!expected.includes(name)) stray.push(name)
+			}
+			continue
+		}
+		if (!expected.includes(entry)) stray.push(entry)
+	}
+}
 // Informational only: a real user's profile carries other plugins, and those are
 // not this package's business. A FRESH profile that shows nothing here is the
 // interesting case, and the duplicate-core check below is the hard requirement.

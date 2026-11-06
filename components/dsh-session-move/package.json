@@ -1,7 +1,13 @@
 {
-  "name": "dsh-session-move",
+  "name": "@funniki/dsh-session-toolkit-session-move",
   "version": "0.1.0",
   "description": "Move a stored Session to another Workspace: rewrite its header cwd, relocate its log, update Workspace accounting, with backup, verification, rollback, and a restart-retry queue.",
+  "license": "MIT",
+  "author": "funniki",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Funniki/dsh-session-toolkit.git"
+  },
   "type": "module",
   "main": "lib/host.js",
   "exports": {
@@ -19,6 +25,9 @@
     "locale/*.json",
     "icon.svg"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "dsh": {
     "client": {
       "platform": "web",
@@ -29,6 +38,5 @@
         "@deepseek-ai/dsh-client-ui-workspace"
       ]
     }
-  },
-  "license": "MIT"
+  }
 }
