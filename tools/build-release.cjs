@@ -20,7 +20,6 @@
 
 "use strict";
 
-const { execFileSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 
@@ -167,28 +166,135 @@ function auditPack(componentNames) {
 }
 
 /**
- * Zip the pack contents into `dist/`.
- * @param version - pack version.
- * @returns the archive path.
+ * Collect every regular file below a directory, as sorted forward-slash
+ * relative paths.
+ * @param root - directory to walk.
+ * @returns relative paths, sorted so two builds of one tree agree byte for byte.
  */
-function writeZip(version) {
-	fs.mkdirSync(DIST, { recursive: true });
-	const out = path.join(DIST, `dsh-session-toolkit-${version}.zip`);
-	fs.rmSync(out, { force: true });
-	if (process.platform === "win32") {
-		execFileSync(
-			"powershell.exe",
-			[
-				"-NoProfile",
-				"-Command",
-				`Compress-Archive -Path '${path.join(PLUGIN, "*").replace(/'/g, "''")}' -DestinationPath '${out.replace(/'/g, "''")}' -CompressionLevel Optimal`
-			],
-			{ stdio: "pipe" }
-		);
-	} else {
-		execFileSync("zip", ["-qr", out, "."], { cwd: PLUGIN, stdio: "pipe" });
+function listFiles(root) {
+	const found = [];
+	/** @param dir - absolute directory. @param prefix - relative prefix. */
+	function walk(dir, prefix) {
+		for (const entry of fs.readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+			const relative = prefix === "" ? entry.name : `${prefix}/${entry.name}`;
+			const absolute = path.join(dir, entry.name);
+			if (entry.isDirectory()) walk(absolute, relative);
+			else if (entry.isFile()) found.push(relative);
+		}
 	}
-	return out;
+	walk(root, "");
+	return found;
+}
+
+/** CRC-32 table, built once. */
+const CRC_TABLE = (() => {
+	const table = new Int32Array(256);
+	for (let index = 0; index < 256; index += 1) {
+		let value = index;
+		for (let bit = 0; bit < 8; bit += 1) {
+			value = value & 1 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+		}
+		table[index] = value;
+	}
+	return table;
+})();
+
+/**
+ * CRC-32 of one buffer, as the ZIP format requires.
+ * @param buffer - file contents.
+ * @returns the unsigned checksum.
+ */
+function crc32(buffer) {
+	let crc = -1;
+	for (const byte of buffer) crc = CRC_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+	return (crc ^ -1) >>> 0;
+}
+
+/**
+ * Fixed MS-DOS time/date stamp (2026-01-01 00:00), so rebuilding the same tree
+ * produces the same archive: hashes in a release note stay meaningful.
+ */
+const DOS_TIME = 0;
+const DOS_DATE = ((2026 - 1980) << 9) | (1 << 5) | 1;
+
+/**
+ * Write a ZIP archive without any dependency or shell-out.
+ *
+ * `Compress-Archive` stores entry names with backslashes on Windows, which
+ * unpacks into literal backslash filenames on Linux and macOS — a release
+ * archive must use forward slashes everywhere, so the container is written here
+ * instead. Deflate + one fixed timestamp keeps the output small and repeatable.
+ *
+ * @param sourceDir - directory whose CONTENTS become the archive root.
+ * @param outFile - archive path to write.
+ * @returns the archive size in bytes.
+ */
+function writeZip(sourceDir, outFile) {
+	const { deflateRawSync } = require("node:zlib");
+	const entries = [];
+	const localChunks = [];
+	let offset = 0;
+	for (const relative of listFiles(sourceDir)) {
+		const data = fs.readFileSync(path.join(sourceDir, relative));
+		const name = Buffer.from(relative, "utf8");
+		const body = deflateRawSync(data, { level: 9 });
+		const checksum = crc32(data);
+
+		const local = Buffer.alloc(30);
+		local.writeUInt32LE(0x04034b50, 0);
+		local.writeUInt16LE(20, 4);
+		local.writeUInt16LE(0x0800, 6); // UTF-8 entry names
+		local.writeUInt16LE(8, 8); // deflate
+		local.writeUInt16LE(DOS_TIME, 10);
+		local.writeUInt16LE(DOS_DATE, 12);
+		local.writeUInt32LE(checksum, 14);
+		local.writeUInt32LE(body.length, 18);
+		local.writeUInt32LE(data.length, 22);
+		local.writeUInt16LE(name.length, 26);
+		local.writeUInt16LE(0, 28);
+		localChunks.push(local, name, body);
+
+		entries.push({ name, checksum, compressed: body.length, size: data.length, offset });
+		offset += local.length + name.length + body.length;
+	}
+
+	const centralChunks = [];
+	for (const entry of entries) {
+		const central = Buffer.alloc(46);
+		central.writeUInt32LE(0x02014b50, 0);
+		central.writeUInt16LE(20, 4);
+		central.writeUInt16LE(20, 6);
+		central.writeUInt16LE(0x0800, 8);
+		central.writeUInt16LE(8, 10);
+		central.writeUInt16LE(DOS_TIME, 12);
+		central.writeUInt16LE(DOS_DATE, 14);
+		central.writeUInt32LE(entry.checksum, 16);
+		central.writeUInt32LE(entry.compressed, 20);
+		central.writeUInt32LE(entry.size, 24);
+		central.writeUInt16LE(entry.name.length, 28);
+		central.writeUInt16LE(0, 30);
+		central.writeUInt16LE(0, 32);
+		central.writeUInt16LE(0, 34);
+		central.writeUInt16LE(0, 36);
+		central.writeUInt32LE(0, 38);
+		central.writeUInt32LE(entry.offset, 42);
+		centralChunks.push(central, entry.name);
+	}
+	const centralBuffer = Buffer.concat(centralChunks);
+
+	const end = Buffer.alloc(22);
+	end.writeUInt32LE(0x06054b50, 0);
+	end.writeUInt16LE(0, 4);
+	end.writeUInt16LE(0, 6);
+	end.writeUInt16LE(entries.length, 8);
+	end.writeUInt16LE(entries.length, 10);
+	end.writeUInt32LE(centralBuffer.length, 12);
+	end.writeUInt32LE(offset, 16);
+	end.writeUInt16LE(0, 20);
+
+	const archive = Buffer.concat([...localChunks, centralBuffer, end]);
+	fs.writeFileSync(outFile, archive);
+	return archive.length;
 }
 
 function main() {
@@ -207,8 +313,10 @@ function main() {
 		console.log(`\nchecked dsh-session-toolkit@${pack.version} (no archive written)`);
 		return;
 	}
-	const archive = writeZip(pack.version);
-	const size = fs.statSync(archive).size;
+	fs.mkdirSync(DIST, { recursive: true });
+	const archive = path.join(DIST, `dsh-session-toolkit-${pack.version}.zip`);
+	fs.rmSync(archive, { force: true });
+	const size = writeZip(PLUGIN, archive);
 	console.log(`\nwrote ${path.relative(ROOT, archive)} (${(size / 1024).toFixed(1)} KB)`);
 }
 
