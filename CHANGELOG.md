@@ -2,7 +2,9 @@
 
 ## 0.1.0 · 首个对外版本
 
-一个插件包 + 五个组件，**零第三方依赖**，以 zip 形式发布（后续再上 npm）。
+已发布：npm 上 6 个包均为 `0.1.0` —— `@funniki/dsh-session-toolkit` 加五个
+`@funniki/dsh-session-toolkit-*` 组件包；GitHub Release 附同名 zip。
+一个插件包 + 五个组件，**零第三方依赖**；zip 与 npm 两个渠道同时发布。
 
 ### 五个组件
 

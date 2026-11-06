@@ -4,7 +4,7 @@
 
 **一个插件包（pack）+ 五个组件，零第三方依赖** —— 整个包只用到 Node 内置模块和 DSH 页面自带的 `react`，不往里塞任何 `@deepseek-ai/*` 副本。
 
-当前版本 **0.1.0**。npm 包名使用 `@funniki/*`，npm 渠道尚未发布。
+当前版本 **0.1.0**，两个渠道都已上线：npm 上是 `@funniki/dsh-session-toolkit` 及五个 `@funniki/dsh-session-toolkit-*` 组件包；GitHub Release 上是同名 zip。
 
 | 组件包 | 显示名 | 做什么 | 出现在 |
 |---|---|---|---|
