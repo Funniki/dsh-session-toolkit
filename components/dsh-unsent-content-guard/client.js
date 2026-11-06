@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-	id: "dsh-unsent-content-guard",
+	id: "@funniki/dsh-session-toolkit-unsent-content-guard",
 	factory: (require) => {
 		var module = { exports: {} };
 		var exports = module.exports;

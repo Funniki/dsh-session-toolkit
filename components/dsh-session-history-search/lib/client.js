@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-	id: "dsh-session-history-search",
+	id: "@funniki/dsh-session-toolkit-session-history-search",
 	factory: (require) => {
 		var module = { exports: {} };
 		var exports = module.exports;

@@ -377,7 +377,7 @@ async function handleReadImage(ctx, request, store) {
 	if (live !== undefined && typeof live.snapshotEvents === "function") {
 		const sent = live.snapshotEvents().some((event) => event.type === "user/message" && committedContent(event).imageIds.includes(entry.attachmentId));
 		if (sent) {
-			const removed = await store.removeByAttachmentIds([entry.attachmentId]);
+			const removed = await store.removeCommitted([entry.attachmentId], []);
 			return json(409, {
 				ok: false,
 				sent: true,
@@ -744,6 +744,36 @@ class DraftStore {
 			}
 			return removed;
 		});
+	}
+
+	/**
+	 * Drop entries whose backing file disappeared (a manual delete, or another
+	 * tool's cleanup). Keeps the index honest so `list` never offers a restore
+	 * whose bytes are already gone.
+	 * @returns how many entries were dropped.
+	 */
+	async pruneMissingFiles() {
+		await this.ensure();
+		const stale = [];
+		for (const entry of this.entries) {
+			if (typeof entry.file !== "string") continue;
+			const absolute = this.absolutePath(entry.file);
+			if (absolute === undefined) {
+				stale.push(entry);
+				continue;
+			}
+			try {
+				await stat(absolute);
+			} catch {
+				stale.push(entry);
+			}
+		}
+		if (stale.length === 0) return 0;
+		await this.serialize(async () => {
+			this.entries = this.entries.filter((entry) => !stale.includes(entry));
+			await this.persist();
+		});
+		return stale.length;
 	}
 
 	/**

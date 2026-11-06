@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-	id: "dsh-archived-session-delete",
+	id: "@funniki/dsh-session-toolkit-archived-session-delete",
 	factory: (require) => {
 		var module = { exports: {} };
 		var exports = module.exports;

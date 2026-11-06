@@ -22,7 +22,7 @@
 // lost, the paste just falls back to normal behavior.
 //
 window.__ModuleLoader__.load({
-  id: 'dsh-auto-paste',
+  id: '@funniki/dsh-session-toolkit-auto-paste',
   factory: (require) => {
     'use strict'
 

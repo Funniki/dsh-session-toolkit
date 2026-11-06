@@ -1,5 +1,5 @@
 window.__ModuleLoader__.load({
-	id: "dsh-session-move",
+	id: "@funniki/dsh-session-toolkit-session-move",
 	factory: (require) => {
 		var module = { exports: {} };
 		// session-move:probe-installed
