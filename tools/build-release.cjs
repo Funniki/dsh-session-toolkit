@@ -163,12 +163,25 @@ function auditComponent(name, dir) {
 		const clientPath = path.join(dir, clientRel);
 		if (!fs.existsSync(clientPath)) errors.push(`${name}: browser half is missing at ${clientRel}`);
 		else {
-			for (const specifier of specifiersOf(fs.readFileSync(clientPath, "utf8"))) {
+			const clientSource = fs.readFileSync(clientPath, "utf8");
+			for (const specifier of specifiersOf(clientSource)) {
 				if (!CLIENT_ALLOWED.test(specifier)) {
 					errors.push(
 						`${name}: browser half requires "${specifier}" — only react and @deepseek-ai/dsh-client-* are allowed`
 					);
 				}
+			}
+			// The Host looks a row's client bundle up by the row's PACKAGE NAME, so the
+			// bundle must register that exact id. A mismatch (0.1.2 shipped the pre-scope
+			// bare names) makes the loader retry the fallback URL and the second execution
+			// throws "duplicate factory registration" — the whole client half dies, while
+			// the host half keeps working, which is exactly how it went unnoticed.
+			const loaderId = /__ModuleLoader__\.load\(\{\s*\n\s*id:\s*['"]([^'"]+)['"]/.exec(clientSource);
+			if (loaderId === null) errors.push(`${name}: browser half has no __ModuleLoader__.load id`);
+			else if (loaderId[1] !== name) {
+				errors.push(
+					`${name}: browser half registers id "${loaderId[1]}" — it must equal the package name`
+				);
 			}
 		}
 	}
@@ -222,6 +235,14 @@ function auditPack(list) {
 		}
 	}
 	if (!fs.existsSync(path.join(PLUGIN, "LICENSE"))) errors.push("pack: LICENSE is missing");
+	// One installer per platform family: Windows gets the PowerShell one, macOS and
+	// Linux the POSIX one. Shipping only the .ps1 leaves half the users stuck.
+	for (const installer of ["install.ps1", "install.sh"]) {
+		if (!fs.existsSync(path.join(PLUGIN, installer))) errors.push(`pack: ${installer} is missing`);
+	}
+	for (const installer of ["install.ps1", "install.sh"]) {
+		if (!(pack.files ?? []).includes(installer)) errors.push(`pack: ${installer} is not in "files"`);
+	}
 
 	const rows = fs.readFileSync(path.join(PLUGIN, "cordis.patch.yml"), "utf8");
 	for (const component of list) {

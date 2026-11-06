@@ -29,18 +29,26 @@
 > 这就是 0.1.0 只装 pack 会报 `Cannot find package ...` 的原因。
 >
 > 如果 profile 被改成非 hoisted 布局（默认的 `isolated`），组件会落在 `.pnpm` 里而不在根上，
-> 这时用 `install.ps1`（它会检测并补齐）或手动装那 5 个组件。
+> 这时用安装脚本（它会检测并补齐）或手动装那 5 个组件。
 
-### 渠道 A：zip（Windows 一键）
+### 渠道 A：zip
 
-1. 下载 `dsh-session-toolkit-0.1.1.zip`，解压到一个**固定位置**（例如 `C:\Users\<你>\dsh-plugins\dsh-session-toolkit-0.1.1`）。安装走本地链接（`link:`），之后**不要删这个目录、也不要移动它**。
-2. 在该目录里跑：
+1. 下载 `dsh-session-toolkit-<版本>.zip`，解压到一个**固定位置**。安装走本地链接（`link:`），之后**不要删这个目录、也不要移动它**。
+2. 在解压目录里按平台跑（两个脚本等价）：
 
    ```powershell
+   # Windows
    powershell -ExecutionPolicy Bypass -File .\install.ps1
    ```
 
+   ```sh
+   # macOS / Linux
+   sh ./install.sh
+   ```
+
 3. 重启 DSH（或到 插件 页把「会话功能增强」关掉再打开）。
+
+> 脚本找不到 `dsh` 时，可指定：`DSH_BIN=/path/to/dsh sh ./install.sh`（Windows 上等价于把 dsh 加进 PATH）。
 
 ### 渠道 B：npm
 
@@ -120,7 +128,14 @@ node verification/auto-paste-zero-dep.test.mjs    # auto-paste 宿主半边的�
 node verification/verify-profile.mjs              # 装完后的体检
 ```
 
-审计会拦住这些回归：包里出现不该有的包、宿主半边 import 了非 `node:` 模块、浏览器半边 require 了 `react` / `@deepseek-ai/dsh-client-*` 之外的东西、包名/许可证/`publishConfig` 不对、patch 里漏了某一行。
+审计会拦住这些回归：包里出现不该有的包、宿主半边 import 了非 `node:` 模块、浏览器半边 require 了 `react` / `@deepseek-ai/dsh-client-*` 之外的东西、**浏览器半边的模块 id 与包名不一致**（0.1.2 的事故）、包名/许可证/`publishConfig` 不对、patch 里漏了某一行、两个平台的安装脚本缺失。
+
+发布前还要跑一遍**产物验证**（对着 `pnpm pack` 的 tarball，而不是工作区）：
+
+```bash
+node verification/verify-release.mjs --local                       # 发布前
+node verification/verify-release.mjs --version 0.1.2 --install    # 发布后，从 registry 回读
+```
 
 发布到 npm（主包与五个组件）：
 

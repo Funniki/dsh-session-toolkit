@@ -17,3 +17,20 @@
 - 准备发布时，先给出「版本号 + 改动清单 + 将要执行的命令」，等用户明确说「传」再执行。
 - **git 也不要为一点点变化就动**：`commit` 攒成一批再做，打 tag 和推送远程一律先确认。
 - npm 上的版本一旦发布就无法干净撤回，所以宁可多问一次。
+
+## 发布前的验证门槛
+
+- 结论必须对着**产物**验证，不能对着工作区：用户拿到的是 tarball / zip，不是源码。
+- 发布前：`node verification/verify-release.mjs --local`（对 `pnpm pack` 出来的 6 个 tarball 做全量检查）。
+- 发布后：`node verification/verify-release.mjs --version <版本> --tag <tag> --install`（从 registry 下载、装进临时 profile 再检查）。
+- 检查覆盖踩过的坑：浏览器半边的模块 id 必须等于包名（0.1.2 就是这里坏了）、宿主半边只 import `node:`、
+  pack 的依赖恰好是五个组件且版本一致、tarball 里没有 `node_modules`、图标与语言文件齐全。
+- 全绿之前不报告完成，也不让用户去拉。
+
+## 两个已经吃过亏的硬约束
+
+- **客户端半边加载失败是 web 启动的致命错误**：DSH 会直接崩（`web boot: N entries did not activate`），
+  不是像"未运行"那样温和。所以任何客户端改动都必须让每个 bundle 能按**包名**注册。
+- **不要手改 profile 里的 `node_modules`**：pnpm 用硬链接把包链到内容寻址存储（一个文件多个 inode 共享），
+  原地改写会污染 store，下一次 install 的完整性校验会把改动**还原回去**，把已修好的环境重新弄坏。
+  要改就发新版本、走正常安装。
