@@ -4,7 +4,7 @@
 
 **一个插件包（pack）+ 五个组件，零第三方依赖** —— 整个包只用到 Node 内置模块和 DSH 页面自带的 `react`，不往里塞任何 `@deepseek-ai/*` 副本。
 
-当前版本 **0.1.0**（npm 上为 `@funniki/*`）。
+当前版本 **0.1.0**。npm 包名使用 `@funniki/*`，npm 渠道尚未发布。
 
 | 组件包 | 显示名 | 做什么 | 出现在 |
 |---|---|---|---|
@@ -35,7 +35,9 @@
 
 3. 重启 DSH（或到 插件 页把「会话功能增强」关掉再打开）。
 
-### 渠道 B：npm
+### 渠道 B：npm（待发布）
+
+npm 发布完成后可使用以下命令；当前请下载 GitHub Release 中的 ZIP 安装包。
 
 ```bash
 dsh plugin --profile desktop add @funniki/dsh-session-toolkit
@@ -114,7 +116,7 @@ node verification/verify-profile.mjs              # 装完后的体检
 
 审计会拦住这些回归：包里出现不该有的包、宿主半边 import 了非 `node:` 模块、浏览器半边 require 了 `react` / `@deepseek-ai/dsh-client-*` 之外的东西、包名/许可证/`publishConfig` 不对、patch 里漏了某一行。
 
-发布到 npm（6 个包，版本号一起动）：
+发布到 npm（主包与五个组件）：
 
 ```bash
 for pkg in plugin components/*; do
@@ -123,12 +125,6 @@ done
 ```
 
 > `plugin/node_modules/`（随包分发的 5 个组件副本）被 git 忽略，由上面的脚本从 `components/` 生成。所以**从仓库直接装之前先跑一次** `node tools/build-release.cjs --check`；拿 Release 里的 zip 安装则不需要，zip 里已经带好了。
-
-## 版本约定
-
-- `0.1.0` 是首个对外版本；pack 与 5 个组件版本号保持一致；
-- 修 bug 攒成一批后涨 `0.1.x`；加组件涨 `0.x.0`；
-- 详见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 许可证
 

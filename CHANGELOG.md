@@ -1,15 +1,5 @@
 # 变更日志
 
-版本号约定（本项目）：
-
-- **0.1.0** 是首个对外版本。
-- **修 bug / 零散小问题**：不逐个涨号，攒成一批合并后再涨一次 `0.1.x`。
-- **增加功能**：涨 `0.1.x`；一批功能较多时可以跨几个号（例如 `0.1.0` → `0.1.4`）。
-- **新增组件**（结构性变化）：涨 `0.x.0`，例如 `0.2.0`。
-- 实验性改动本身**不改版本号**，只在准备发版时统一调整。
-
----
-
 ## 0.1.0 · 首个对外版本
 
 一个插件包 + 五个组件，**零第三方依赖**，以 zip 形式发布（后续再上 npm）。
@@ -47,7 +37,7 @@ zip → 解压到固定目录 → `install.ps1`（内部是 6 次 `dsh plugin ad
   并审计三类回归（带作用域的依赖进包、宿主半边 import 非 `node:` 模块、
   浏览器半边 require 非平台模块）。
 - 补 `LICENSE`（MIT）与各包 `license` 字段，去掉 `private: true`。
-- 6 个包统一发布到 `@funniki` scope：`@funniki/dsh-session-toolkit` 加五个
+- 为 npm 渠道将 6 个包名统一改为 `@funniki` scope：`@funniki/dsh-session-toolkit` 加五个
   `@funniki/dsh-session-toolkit-*`。行名跟着改成 scoped 名——裸名 `dsh-auto-paste`
   会和上游同名插件撞车，而 bundle 行本来就按包名从 profile 根解析。
 
