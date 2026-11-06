@@ -66,6 +66,11 @@ node verification/verify-profile.mjs --profile desktop
 
 首选**插件页 → 会话功能增强 → 移除**（管理器和 profile 清单会一起收尾）。命令行卸载会留下 `dsh.profile.bundles` 里的悬空条目，需要再到插件页清一次。
 
+> ⚠️ **不要用仓库目录（`session-toolkit/plugin`）直接安装。** 本地目录安装会记成 `link:`，
+> 而插件页的「卸载」会连带清空链接目标里的文件 —— 实测会把 pack 的 `package.json`/`locale`
+> 和五个组件副本一起删掉，于是出现「包元信息错误 ENOENT …\plugin\locale」和五行「未运行」。
+> 仓库只用于开发和构建：安装请走 npm，或把 zip 解压到独立目录再装。
+
 ## 配置
 
 每个组件的行配置写在 pack 的 `cordis.patch.yml` 里，装好后由 DSH 收进 profile 的 patch，可直接在 profile 里改。当前只有 `auto-paste` 带配置：
