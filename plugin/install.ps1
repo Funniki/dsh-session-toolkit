@@ -4,17 +4,19 @@ param(
 	[switch]$SkipChecks
 )
 
-# Installs dsh-session-toolkit and its five components into one DSH profile.
+# Installs the pack into one DSH profile, one command, both channels.
 #
-# Works for BOTH distribution channels from the same script:
-#   * extracted zip  — the five components sit in ./node_modules/ and are
-#                      installed from there (link:, keep this folder in place);
-#   * npm package    — no bundled copies are present, so the published
-#                      @funniki/dsh-session-toolkit-* names are installed from
-#                      the registry instead.
+# Since 0.1.1 the pack declares the five components as its own dependencies, and
+# DSH profiles install with `nodeLinker: hoisted` — so the components land at the
+# profile ROOT, which is exactly where a bundle row resolves its `name`. That is
+# why installing the pack alone is enough now (0.1.0 needed six separate adds).
 #
-# Six installs are required either way: a bundle row resolves its `name` from the
-# PROFILE root, so the pack alone leaves all five rows unable to import.
+# This script therefore:
+#   1. installs the pack (from this folder when it is the extracted zip, from the
+#      registry when it came out of npm);
+#   2. checks that all five rows are resolvable from the profile root;
+#   3. only if one is not (a profile switched to the isolated linker), installs
+#      that component explicitly as a fallback.
 
 $ErrorActionPreference = "Stop"
 
@@ -42,7 +44,6 @@ if (-not $dsh) {
 if (-not $dsh) {
 	throw "DeepSeek Harness CLI was not found. Install DSH or put dsh on PATH."
 }
-
 if (-not (Test-Path -LiteralPath (Join-Path $pluginRoot "package.json"))) {
 	throw "package.json is missing next to install.ps1."
 }
@@ -56,58 +57,67 @@ function Add-ProfilePackage {
 	}
 }
 
-# The pack itself: this folder when it is a local package, the registry otherwise.
-if ((Get-Content -LiteralPath (Join-Path $pluginRoot "package.json") -Raw | ConvertFrom-Json).name -eq $packName) {
+# 1. The pack: this folder when it is the extracted zip, the registry otherwise.
+$thisPackage = Get-Content -LiteralPath (Join-Path $pluginRoot "package.json") -Raw | ConvertFrom-Json
+if ($thisPackage.name -eq $packName) {
 	Add-ProfilePackage -Target $pluginRoot
 } else {
 	Add-ProfilePackage -Target $packName
 }
 
+$dshHome = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path $HOME ".dsh" }
+$profileDir = Join-Path (Join-Path $dshHome "profiles") $Profile
+$nodeModules = Join-Path $profileDir "node_modules"
+
+# 2. Do all five rows resolve from the profile root? (That is where the loader looks.)
+$missing = @()
 foreach ($component in $components) {
-	$bundled = Join-Path $pluginRoot "node_modules/$component"
-	if (Test-Path -LiteralPath (Join-Path $bundled "package.json")) {
-		Add-ProfilePackage -Target $bundled
-	} else {
-		Add-ProfilePackage -Target $component
+	if (-not (Test-Path -LiteralPath (Join-Path $nodeModules $component))) {
+		$missing += $component
+	}
+}
+
+# 3. Fallback for a profile that is not hoisted: install each missing component.
+if ($missing.Count -gt 0) {
+	Write-Host ""
+	Write-Host "These components did not arrive with the pack (profile is not using the hoisted linker):"
+	foreach ($component in $missing) { Write-Host "  $component" }
+	foreach ($component in $missing) {
+		$bundled = Join-Path $pluginRoot "node_modules/$component"
+		if (Test-Path -LiteralPath (Join-Path $bundled "package.json")) {
+			Add-ProfilePackage -Target $bundled
+		} else {
+			Add-ProfilePackage -Target $component
+		}
 	}
 }
 
 if ($SkipChecks) {
 	Write-Host ""
-	Write-Host "Installed into profile '$Profile' (post-install checks skipped)."
+	Write-Host "Installed $packName into profile '$Profile' (post-install checks skipped)."
 	return
 }
 
-$dshHome = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path $HOME ".dsh" }
-$profileDir = Join-Path (Join-Path $dshHome "profiles") $Profile
 $profileManifestPath = Join-Path $profileDir "package.json"
-$lockfilePath = Join-Path $profileDir "pnpm-lock.yaml"
-
 if (-not (Test-Path -LiteralPath $profileManifestPath)) {
 	throw "Profile manifest not found: $profileManifestPath"
 }
-
 $manifest = Get-Content -LiteralPath $profileManifestPath -Raw | ConvertFrom-Json
-$bundles = @($manifest.dsh.profile.bundles)
-if ($bundles -notcontains $packName) {
+if (-not (($manifest.dsh.profile.bundles) -contains $packName)) {
 	throw "Profile did not register $packName as a bundle."
 }
 foreach ($component in $components) {
-	if (-not $manifest.dependencies.PSObject.Properties[$component]) {
-		throw "Profile dependency was not recorded: $component"
+	if (-not (Test-Path -LiteralPath (Join-Path $nodeModules $component))) {
+		throw "Component is still not resolvable from the profile root: $component"
 	}
 }
 
-# The whole point of 0.1.0: no Harness core copy inside the profile.
-$duplicateCore = Join-Path $profileDir "node_modules\@deepseek-ai\dsh-tools"
+# The whole point of 0.1.x: no Harness core copy inside the profile.
+$duplicateCore = Join-Path $nodeModules "@deepseek-ai\dsh-tools"
 if (Test-Path -LiteralPath $duplicateCore) {
 	throw "Duplicate core package detected: $duplicateCore. Remove it before starting DSH."
 }
-if ((Test-Path -LiteralPath $lockfilePath) -and
-	((Get-Content -LiteralPath $lockfilePath -Raw) -match "(?m)^\s*'@deepseek-ai/dsh-tools@")) {
-	throw "pnpm-lock.yaml still resolves @deepseek-ai/dsh-tools at the profile root."
-}
 
 Write-Host ""
-Write-Host "Installed $packName and all five components into profile '$Profile'."
+Write-Host "Installed $packName and its five components into profile '$Profile'."
 Write-Host "Restart DSH, or disable and re-enable the bundle in Plugins if it is already running."

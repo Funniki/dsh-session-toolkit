@@ -4,8 +4,9 @@
  * Answers the three questions an installer must be able to answer, from the
  * profile's own point of view (which is where the loader resolves bundle rows):
  *
- *   1. does the profile record the pack AND its five components as dependencies,
- *      and register the pack as a bundle?
+ *   1. does the profile record the pack as a dependency and register it as a
+ *      bundle? (the five components arrive as the pack's own dependencies, and
+ *      point 2 below is what actually proves they landed)
  *   2. does every row's host half actually import from the profile root — the
  *      exact place the loader resolves it, and the exact place a missing
  *      component shows up as `ERR_MODULE_NOT_FOUND`?
@@ -56,10 +57,7 @@ const bundles = manifest.dsh?.profile?.bundles ?? []
 const expected = [PACK, ...COMPONENTS]
 
 console.log(`profile: ${profileName} (${profileDir})`)
-check(
-	expected.every((name) => dependencies.includes(name)),
-	`records all 6 dependencies (missing: ${expected.filter((name) => !dependencies.includes(name)).join(', ') || 'none'})`
-)
+check(dependencies.includes(PACK), `records ${PACK} as a dependency`)
 check(bundles.includes(PACK), `${PACK} is registered as a bundle`)
 
 const require = createRequire(`${profileDir.replace(/\\/g, '/')}/`)
@@ -74,6 +72,13 @@ for (const name of expected) {
 	} catch (error) {
 		check(false, `${name} failed to import: ${error.code ?? ''} ${String(error.message).split('\n')[0]}`)
 	}
+}
+
+const declaredDirectly = COMPONENTS.filter((name) => dependencies.includes(name))
+if (declaredDirectly.length < COMPONENTS.length) {
+	console.log(
+		`     components declared as profile dependencies: ${declaredDirectly.length}/5 — the rest arrive through the pack`
+	)
 }
 
 const nodeModules = join(profileDir, 'node_modules')

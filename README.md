@@ -14,19 +14,26 @@
 | `@funniki/dsh-session-toolkit-session-history-search` | 会话历史搜索 | 中文关键词搜历史消息，结果小窗 | 搜索入口 |
 | `@funniki/dsh-session-toolkit-auto-paste` | 长文本转附件 | 粘贴超过阈值的长文本自动存成工作区 `pastes/*.md` / `*.txt`，输入框只留一张带预览的卡片 | 输入框 + 设置页 |
 
-## ⚠️ 安装：必须装 6 个包，只装 pack 会全部失效
+## 安装：一条命令装齐
 
-这不是啰嗦，是 DSH 的机制：bundle 行（`cordis.patch.yml` 里每条的 `name`）**只从 profile 根解析**，pack 自带的 `node_modules/` 对行解析不可见。所以：
+从 `0.1.1` 起，pack 把五个组件声明成了自己的 `dependencies`。DSH 的 profile 用
+`nodeLinker: hoisted` 安装依赖，组件会被平铺到 **profile 根目录** —— 正好是 bundle 行
+（`cordis.patch.yml` 里每条的 `name`）解析包名的地方。所以下面任选一种就能装齐六个包：
 
-- 只安装 `@funniki/dsh-session-toolkit` → 插件列表里关联的五行全是「未运行」，并报
-  `Cannot find package '@funniki/dsh-session-toolkit-auto-paste' imported from ...\profiles\desktop\`；
-- 必须把 pack 和 5 个组件都装进 profile。
+- 插件页「添加插件」只填 `@funniki/dsh-session-toolkit`；
+- 命令行 `dsh plugin --profile desktop add @funniki/dsh-session-toolkit`。
 
-`install.ps1` 已经把 6 次安装串成一条命令，并且**两个渠道通用**：zip 里带了组件副本就从本地目录装，npm 包没有副本就自动改用 registry 上的 scoped 名。
+装完五行会自动激活。0.1.0 没有声明依赖，所以那时必须手动装 6 个；0.1.1 把这件事收进了依赖声明。
+
+> 原理：bundle 行只从 profile 根解析，pack 自带的 `node_modules/` 对行解析不可见 ——
+> 这就是 0.1.0 只装 pack 会报 `Cannot find package ...` 的原因。
+>
+> 如果 profile 被改成非 hoisted 布局（默认的 `isolated`），组件会落在 `.pnpm` 里而不在根上，
+> 这时用 `install.ps1`（它会检测并补齐）或手动装那 5 个组件。
 
 ### 渠道 A：zip（Windows 一键）
 
-1. 下载 `dsh-session-toolkit-0.1.0.zip`，解压到一个**固定位置**（例如 `C:\Users\<你>\dsh-plugins\dsh-session-toolkit-0.1.0`）。安装走本地链接（`link:`），之后**不要删这个目录、也不要移动它**。
+1. 下载 `dsh-session-toolkit-0.1.1.zip`，解压到一个**固定位置**（例如 `C:\Users\<你>\dsh-plugins\dsh-session-toolkit-0.1.1`）。安装走本地链接（`link:`），之后**不要删这个目录、也不要移动它**。
 2. 在该目录里跑：
 
    ```powershell
@@ -35,20 +42,14 @@
 
 3. 重启 DSH（或到 插件 页把「会话功能增强」关掉再打开）。
 
-### 渠道 B：npm（待发布）
-
-npm 发布完成后可使用以下命令；当前请下载 GitHub Release 中的 ZIP 安装包。
+### 渠道 B：npm
 
 ```bash
 dsh plugin --profile desktop add @funniki/dsh-session-toolkit
-dsh plugin --profile desktop add @funniki/dsh-session-toolkit-archived-session-delete
-dsh plugin --profile desktop add @funniki/dsh-session-toolkit-session-move
-dsh plugin --profile desktop add @funniki/dsh-session-toolkit-unsent-content-guard
-dsh plugin --profile desktop add @funniki/dsh-session-toolkit-session-history-search
-dsh plugin --profile desktop add @funniki/dsh-session-toolkit-auto-paste
 ```
 
-> `dsh plugin` 是 `pnpm` 的转发器，所以这 6 行等价于在 profile 里 `pnpm add` 这 6 个包。顺序无所谓，六个都要在。
+> `dsh plugin` 是 `pnpm` 的转发器；这条命令会把五个组件作为 pack 的依赖一起装好。
+> 手工补装可以逐条 `add` 五个组件，但不是必需的。
 
 ### 装完怎么确认
 

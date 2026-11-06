@@ -206,8 +206,20 @@ function auditPack(list) {
 	if (pack.license !== "MIT") errors.push(`pack: license must be MIT (got ${JSON.stringify(pack.license)})`);
 	if (pack.private === true) errors.push("pack: package.json is still private — it cannot be published");
 	if (pack.publishConfig?.access !== "public") errors.push('pack: publishConfig.access must be "public"');
-	if (pack.dependencies !== undefined) {
-		errors.push(`pack: declares dependencies ${JSON.stringify(pack.dependencies)} — the pack must be dependency-free`);
+	// The pack depends on exactly its five components and nothing else: under the
+	// profile's `nodeLinker: hoisted` those dependencies are what make a row
+	// resolvable, so an extra (or a missing) one is a broken install.
+	const dependencies = pack.dependencies ?? {};
+	const declared = Object.keys(dependencies).sort();
+	const expectedComponents = list.map((component) => component.name).sort();
+	if (declared.join("|") !== expectedComponents.join("|")) {
+		errors.push(`pack: dependencies must be exactly its five components (got ${declared.join(", ") || "none"})`);
+	}
+	for (const component of list) {
+		const range = dependencies[component.name];
+		if (range !== undefined && !range.includes(component.version)) {
+			errors.push(`pack: dependency range ${range} for ${component.name} does not include ${component.version}`);
+		}
 	}
 	if (!fs.existsSync(path.join(PLUGIN, "LICENSE"))) errors.push("pack: LICENSE is missing");
 

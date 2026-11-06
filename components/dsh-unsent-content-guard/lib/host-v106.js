@@ -33,7 +33,7 @@
 
 import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { appendFile, mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
+import { access, appendFile, mkdir, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join, resolve, sep } from "node:path";
 
@@ -183,7 +183,7 @@ function resolveOptions(config) {
 	return {
 		enabled: raw.enabled !== false,
 		root: configuredRoot === "" ? join(resolveDshHome(), "unsent-content") : resolve(configuredRoot),
-		retainDays: Number.isFinite(retainDays) && retainDays > 0 ? retainDays : 0,
+		retainDays: Number.isFinite(retainDays) && retainDays > 0 ? retainDays : 3,
 		selfTest: raw.selfTest === true,
 		debugEvents: raw.debugEvents === true,
 		restoreOnOpen: raw.restoreOnOpen !== false,
@@ -410,6 +410,7 @@ async function handleReadImage(ctx, request, store) {
  */
 async function handleList(store, options) {
 	await store.ensure();
+	await store.pruneMissingFiles();
 	const entries = await store.snapshot();
 	const images = entries.filter((entry) => entry.kind === "image");
 	return json(200, {
@@ -561,6 +562,7 @@ class DraftStore {
 		this.root = root;
 		this.logger = logger;
 		this.entries = null;
+		this.lastMtime = 0;
 		this.chain = Promise.resolve();
 	}
 
@@ -569,16 +571,19 @@ class DraftStore {
 		return join(this.root, INDEX_NAME);
 	}
 
-	/** Load the index once, tolerating a missing file. */
+	/** Load the index once, tolerating a missing file, or reload when disk mtime changes. */
 	async ensure() {
-		if (this.entries !== null) return;
 		try {
+			const info = await stat(this.indexPath());
+			if (this.entries !== null && this.lastMtime === info.mtimeMs) return;
 			const raw = await readFile(this.indexPath(), "utf8");
 			const parsed = JSON.parse(raw);
 			this.entries = Array.isArray(parsed?.entries) ? parsed.entries.filter(isStoredEntry) : [];
+			this.lastMtime = info.mtimeMs;
 		} catch (error) {
 			if (error?.code !== "ENOENT") this.warn(`reading the index failed: ${String(error)}`);
 			this.entries = [];
+			this.lastMtime = 0;
 		}
 	}
 

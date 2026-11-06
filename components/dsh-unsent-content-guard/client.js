@@ -20,12 +20,14 @@ window.__ModuleLoader__.load({
 		 * Only the class names are the plugin's own.
 		 */
 		const CSS = [
-			".uig_anchor{min-width:0;font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));display:inline-flex}",
+			".uig_anchor{min-width:0;font-size:calc(var(--dsh-content-font-size-secondary,13px) - 1px);line-height:calc(20px + var(--dsh-content-font-delta-secondary,0px));display:inline-flex;align-items:center;gap:2px}",
 			".uig_pill{box-sizing:border-box;border-radius:var(--dsw-radius-sm);max-width:100%;color:var(--dsw-alias-label-tertiary);font:inherit;font-variant-numeric:tabular-nums;line-height:inherit;white-space:nowrap;background:0 0;border:none;align-items:center;gap:6px;padding:1px 8px;display:inline-flex}",
 			".uig_pill svg{flex:none;width:14px;height:14px}",
 			".uig_pill{cursor:pointer}",
 			".uig_pill:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary)}",
-			".uig_label{text-overflow:ellipsis;min-width:0;overflow:hidden}"
+			".uig_label{text-overflow:ellipsis;min-width:0;overflow:hidden}",
+			".uig_dismiss{box-sizing:border-box;border-radius:var(--dsw-radius-sm);color:var(--dsw-alias-label-tertiary);background:0 0;border:none;cursor:pointer;padding:1px 5px;font-size:12px;line-height:inherit;display:inline-flex;align-items:center;opacity:0.7}",
+			".uig_dismiss:hover{background:var(--dsw-alias-interactive-bg-hover);color:var(--dsw-alias-label-secondary);opacity:1}"
 		].join("");
 		const CSS_TAG_ID = "dsh-unsent-content-guard/Styles.module.css";
 		if (typeof document !== "undefined") {
@@ -45,13 +47,15 @@ window.__ModuleLoader__.load({
 			"pill.images": "未发送图片 {n} 张",
 			"pill.texts": "未发送文字 {n} 条",
 			"pill.both": "未发送备份：图片 {images} 张 · 文字 {texts} 条",
-			"pill.title": "打开备份目录"
+			"pill.title": "打开备份目录",
+			"pill.discard": "清除此会话草稿备份"
 		};
 		const en = {
 			"pill.images": "{n} unsent image(s) saved",
 			"pill.texts": "{n} unsent text(s) saved",
 			"pill.both": "Unsent backup: {images} image(s) · {texts} text(s)",
-			"pill.title": "Open the backup folder"
+			"pill.title": "Open the backup folder",
+			"pill.discard": "Clear unsent backup for this session"
 		};
 		//#endregion
 		//#region lib/types/client/support.js
@@ -248,20 +252,40 @@ window.__ModuleLoader__.load({
 					clearInterval(timer);
 				};
 			}, [guard]);
-			if (!summary || (summary.images <= 0 && summary.texts <= 0)) return null;
-			const label = summary.images > 0 && summary.texts > 0
-				? t("pill.both", { images: summary.images, texts: summary.texts })
-				: summary.images > 0 ? t("pill.images", { n: summary.images }) : t("pill.texts", { n: summary.texts });
+			const currentEntries = Array.isArray(summary?.entries)
+				? summary.entries.filter((entry) => entry.sessionId === sessionId)
+				: [];
+			const sessionImages = currentEntries.filter((entry) => entry.kind === "image").length;
+			const sessionTexts = currentEntries.filter((entry) => entry.kind === "text").length;
+			if (sessionImages <= 0 && sessionTexts <= 0) return null;
+			const label = sessionImages > 0 && sessionTexts > 0
+				? t("pill.both", { images: sessionImages, texts: sessionTexts })
+				: sessionImages > 0 ? t("pill.images", { n: sessionImages }) : t("pill.texts", { n: sessionTexts });
 			const title = t("pill.title");
-			return h("span", { className: "uig_anchor" }, h("button", {
-				type: "button",
-				className: "uig_pill",
-				title,
-				"aria-label": `${label}. ${title}`,
-				onClick: () => {
-					guard.reveal();
-				}
-			}, ICON, h("span", { className: "uig_label" }, label)));
+			const dismissTitle = t("pill.discard");
+			return h("span", { className: "uig_anchor" }, [
+				h("button", {
+					key: "btn",
+					type: "button",
+					className: "uig_pill",
+					title,
+					"aria-label": `${label}. ${title}`,
+					onClick: () => {
+						guard.reveal();
+					}
+				}, ICON, h("span", { className: "uig_label" }, label)),
+				h("button", {
+					key: "dismiss",
+					type: "button",
+					className: "uig_dismiss",
+					title: dismissTitle,
+					"aria-label": dismissTitle,
+					onClick: (e) => {
+						e.stopPropagation();
+						guard.discardSession(sessionId);
+					}
+				}, "✕")
+			]);
 		}
 
 		/**
@@ -303,7 +327,7 @@ window.__ModuleLoader__.load({
 		 * @param ctx - browser context carrying slots and the dictionary registry.
 		 */
 		function apply(ctx) {
-			const summary = createSnapshotStore({ images: 0, texts: 0 });
+			const summary = createSnapshotStore({ images: 0, texts: 0, entries: [] });
 			const capturedImages = new Set();
 			const lastTexts = new Map();
 			const pageLoadAt = Date.now();
@@ -337,14 +361,57 @@ window.__ModuleLoader__.load({
 			};
 
 			/** Refresh the saved-copy counts from the Host. */
-			const refresh = () => {
+						/** Drop ghost copies older than 24 hours. */
+			const purgeStaleEntries = (entries) => {
+				if (!Array.isArray(entries) || entries.length === 0) return;
+				const now = Date.now();
+				const staleDraftIds = [];
+				const staleHashes = [];
+				for (const entry of entries) {
+					if (typeof entry.savedAt === "number" && now - entry.savedAt > 24 * 60 * 60 * 1000) {
+						if (entry.kind === "image" && typeof entry.draftId === "string") staleDraftIds.push(entry.draftId);
+						if (entry.kind === "text") {
+							if (entry.hash) staleHashes.push(entry.hash);
+							if (entry.trimmedHash) staleHashes.push(entry.trimmedHash);
+						}
+					}
+				}
+				if (staleDraftIds.length > 0 || staleHashes.length > 0) {
+					postJson(`${API}/discard`, { draftIds: staleDraftIds, hashes: staleHashes }).catch(() => {});
+				}
+			};
+
+			/** Discard all saved copies of a specific session. */
+			const discardSession = (targetSessionId) => {
+				if (!targetSessionId) return;
+				const current = summary.getSnapshot();
+				const matched = Array.isArray(current?.entries) ? current.entries.filter((e) => e.sessionId === targetSessionId) : [];
+				const draftIds = matched.filter((e) => e.kind === "image" && typeof e.draftId === "string").map((e) => e.draftId);
+				const hashes = [];
+				for (const e of matched) {
+					if (e.kind === "text") {
+						if (e.hash) hashes.push(e.hash);
+						if (e.trimmedHash) hashes.push(e.trimmedHash);
+					}
+				}
+				if (draftIds.length > 0 || hashes.length > 0) {
+					postJson(`${API}/discard`, { draftIds, hashes }).then(() => {
+						refresh();
+					}).catch(() => {});
+				}
+			};
+
+const refresh = () => {
 				if (refreshing) return Promise.resolve();
 				refreshing = true;
 				return postJson(`${API}/list`, {}).then((payload) => {
+					const entries = Array.isArray(payload?.entries) ? payload.entries : [];
 					summary.set({
-						images: typeof payload.images === "number" ? payload.images : 0,
-						texts: typeof payload.texts === "number" ? payload.texts : 0
+						images: typeof payload?.images === "number" ? payload.images : 0,
+						texts: typeof payload?.texts === "number" ? payload.texts : 0,
+						entries
 					});
+					purgeStaleEntries(entries);
 				}).catch(() => {}).finally(() => {
 					refreshing = false;
 				});
@@ -568,6 +635,7 @@ window.__ModuleLoader__.load({
 							/* The Host refuses and drops a copy whose content its Session already
 							 * committed; that is a successful cleanup, not a failure. */
 							probe({ phase: message.includes("already committed") ? "restore-already-sent" : "restore-read-failed", draftId: entry.draftId, message });
+							postJson(`${API}/discard`, { draftIds: [entry.draftId] }).catch(() => {});
 						}
 					}
 					if (files.length === 0) return;

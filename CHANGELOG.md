@@ -1,5 +1,15 @@
 # 变更日志
 
+## 0.1.1
+
+- pack 声明 `dependencies`：五个组件作为依赖一起装。profile 用 `nodeLinker: hoisted`，
+  组件会被平铺到 profile 根目录 —— 正是 bundle 行解析包名的位置。于是插件页只填
+  `@funniki/dsh-session-toolkit`（或一条 `dsh plugin add`）就能完整安装，不再需要手动装 6 个。
+- `install.ps1`：先装 pack，再检测五行能否从 profile 根解析，缺的自动补齐（对非 hoisted 布局兜底）。
+- `verify-profile.mjs`：改为按「能否从 profile 根解析」判定，不再要求 6 个都写进 manifest 的 dependencies。
+- `build-release.cjs`：审计 pack 的依赖集合恰好是五个组件、且版本范围包含当前版本。
+- 文档：补充「不要用仓库目录安装」（`link:` 安装的卸载会清空链接目标）。
+
 ## 0.1.0 · 首个对外版本
 
 已发布：npm 上 6 个包均为 `0.1.0` —— `@funniki/dsh-session-toolkit` 加五个
