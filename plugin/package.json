@@ -1,0 +1,32 @@
+{
+  "name": "dsh-session-toolkit",
+  "version": "0.1.0",
+  "description": "Handier Session management: delete archived Sessions, move a Session to another Workspace, back up unsent composer text and images, and search past messages by keyword (Chinese supported).",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "install.ps1"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/funniki/dsh-session-toolkit.git"
+  },
+  "author": "funniki"
+}

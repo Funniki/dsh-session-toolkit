@@ -1,137 +1,122 @@
-# ⚡ DeepSeek Harness - 会话功能增强套件 (@funniki/dsh-session-toolkit)
+# 会话功能增强 · dsh-session-toolkit
 
-<p align="center">
-  <img src="icon.svg" width="96" height="96" alt="dsh-session-toolkit logo" />
-</p>
+给 DeepSeek Harness 加五个会话管理能力：删已归档会话、把会话搬到别的工作区、备份没发出去的内容、按关键词搜历史、长文粘成附件。
 
-<p align="center">
-  <strong>专为 DeepSeek Harness 设计的多合一会话管理与输入增强插件包</strong>
-</p>
+**一个插件包（pack）+ 五个组件，零第三方依赖** —— 整个包只用到 Node 内置模块和 DSH 页面自带的 `react`，不往里塞任何 `@deepseek-ai/*` 副本。
 
-<p align="center">
-  <a href="https://github.com/Funniki/dsh-session-toolkit"><img src="https://img.shields.io/badge/version-3.0.0-blue.svg?style=flat-square" alt="Version" /></a>
-  <a href="https://github.com/deepseek-ai"><img src="https://img.shields.io/badge/DSH-compatible%20%3E%3D0.2.0-brightgreen.svg?style=flat-square" alt="DSH Compatibility" /></a>
-  <a href="https://github.com/Funniki/dsh-session-toolkit"><img src="https://img.shields.io/github/stars/Funniki/dsh-session-toolkit?style=social" alt="GitHub stars" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green.svg?style=flat-square" alt="License" /></a>
-</p>
+当前版本 **0.1.0**。
 
----
+| 组件 | 显示名 | 做什么 | 出现在 |
+|---|---|---|---|
+| `dsh-archived-session-delete` | 删除已归档会话 | 侧栏已归档会话上出现红色删除按钮，连同磁盘上的会话日志一起删 | 侧栏行 + 会话菜单 |
+| `dsh-session-move` | 会话移动到工作区 | 把会话（含日志、附件）搬到另一个工作区，带备份、校验和失败回滚；开着也能搬 | 会话菜单 |
+| `dsh-unsent-content-guard` | 未发送内容备份 | 没发出去的输入和图片落盘备份，成功发送后才删 | 后台自动 |
+| `dsh-session-history-search` | 会话历史搜索 | 中文关键词搜历史消息，结果小窗 | 搜索入口 |
+| `dsh-auto-paste` | 长文本转附件 | 粘贴超过阈值的长文本自动存成工作区 `pastes/*.md` / `*.txt`，输入框只留一张带预览的卡片 | 输入框 + 设置页 |
 
-## 📖 简介
+## ⚠️ 安装：必须装 6 个包，只装 pack 会全部失效
 
-**@funniki/dsh-session-toolkit** 是一个面向 [DeepSeek Harness](https://github.com/deepseek-ai) 的复合型功能增强套件（Bundle Pack）。
+这不是啰嗦，是 DSH 的机制：bundle 行（`cordis.patch.yml` 里每条的 `name`）**只从 profile 根解析**，pack 自带的 `node_modules/` 对行解析不可见。所以：
 
-采用符合官方标准的 Cordis 复合架构：
-- 🎯 **干净整洁**：在 DSH 插件列表里**仅占用一个「会话功能增强」条目**，杜绝插件列表臃肿。
-- 🧩 **独立管理**：点开详情后，内置的 **5 大功能组件** 各自保留原版图标、名称与独立开关，随心启用。
-- 📦 **免手动软链**：自研组件基于相对路径直接挂载，免去手动配置 junction 或外部依赖的烦恼，即装即用。
+- 只安装 `dsh-session-toolkit` → 插件列表里关联的五行全是「未运行」；
+- 必须把 pack 和 5 个组件都装进 profile。
 
----
+`install.ps1` 已经把 6 次安装串成一条命令，正常情况下你不需要手动敲。
 
-## ✨ 核心功能与入口一览
+### Windows 一键安装
 
-| 模块组件 | 组件包名 | 核心功能 | 使用入口 |
-| :--- | :--- | :--- | :--- |
-| **🗑️ 删除已归档会话** | `dsh-archived-session-delete` | 彻底清理过期的归档会话，抹除日志与投影缓存 | 已归档会话悬停出现的红色删除按钮；或会话菜单「...」中的「删除已归档会话」 |
-| **🚚 会话移动到工作区** | `dsh-session-move` | 将当前会话平跨移动到另一个工作区。**支持热迁移**：会话进行中空闲时可直接搬迁，搬完在新工作区继续对话 | 会话菜单「...」中的「移动到工作区…」 |
-| **🛡️ 未发送内容备份** | `dsh-unsent-content-guard` | 自动保存输入框未发送的文本草稿与图片。切换会话或异常崩溃后一键恢复 | 输入框下方的「未发送备份」浮动胶囊 |
-| **📋 长文本转附件** | `dsh-auto-paste` | 粘贴大段文本（代码/日志/文档）时自动转存为 `pastes/*.md` 附件卡片，防止撑爆上下文和输入框 | 在输入框粘贴超长文本（500+ 字）时自动触发 |
-| **🔍 会话历史全文搜索** | `dsh-session-history-search` | 支持中文关键词模糊检索跨会话的历史发言，一键回溯定位 | 全局快捷键 `Ctrl+Shift+K` 或输入框下方的「搜索历史」小按钮 |
+1. 下载 `dsh-session-toolkit-0.1.0.zip`，解压到一个**固定位置**（例如 `C:\Users\<你>\dsh-plugins\dsh-session-toolkit-0.1.0`）。安装走的是本地链接（`link:`），之后**不要删这个目录、也不要移动它**。
+2. 在该目录里跑：
 
----
+   ```powershell
+   powershell -ExecutionPolicy Bypass -File .\install.ps1
+   ```
 
-## 安装 / 更新
+3. 重启 DSH（或到 插件 页把「会话功能增强」关掉再打开）。
 
-### 在 DeepSeek Harness 网页版或桌面版中安装
+### 手动安装（任何平台）
 
-在 **Add plugin**（添加插件）向导的搜索框中：
+在解压出来的目录里逐条执行（`$root` 换成实际路径）：
 
-- **方式一（GitHub 直接安装，推荐）**：填写本仓库地址
-  ```
-  https://github.com/Funniki/dsh-session-toolkit
-  ```
-- **方式二（npm 官方包名安装）**：
-  ```
-  @funniki/dsh-session-toolkit
-  ```
-
-点击 **Install** 即可自动完成安装与依赖解析。
-
----
-
-### 使用 `dsh` CLI 安装
-
-从 [DeepSeek Harness](https://github.com/deepseek-ai) 终端安装插件：
-
-```sh
-# 通过 GitHub 仓库一键安装
-dsh plugin --profile desktop add https://github.com/Funniki/dsh-session-toolkit
-
-# 或通过 npm 包名安装
-dsh plugin --profile desktop add @funniki/dsh-session-toolkit
+```bash
+dsh plugin --profile desktop add "$root"
+dsh plugin --profile desktop add "$root/node_modules/dsh-archived-session-delete"
+dsh plugin --profile desktop add "$root/node_modules/dsh-session-move"
+dsh plugin --profile desktop add "$root/node_modules/dsh-unsent-content-guard"
+dsh plugin --profile desktop add "$root/node_modules/dsh-session-history-search"
+dsh plugin --profile desktop add "$root/node_modules/dsh-auto-paste"
 ```
 
-更新插件：
+> 顺序无所谓，但六个都要在。`dsh plugin` 是 `pnpm` 的转发器，所以等 npm 渠道发布后，也可以直接 `add` npm 包名。
 
-```sh
-dsh plugin --profile desktop update @funniki/dsh-session-toolkit
+### 装完怎么确认
+
+- 插件页出现一个「会话功能增强」，点开「包含的组件」有 5 条，且都不是「未运行」；
+- `%DSH_HOME%\profiles\desktop\package.json`（macOS/Linux 是 `~/.dsh/...`）里 `dependencies` 有上面 6 个键，`dsh.profile.bundles` 里有 `dsh-session-toolkit`；
+- profile 的 `node_modules` 里**不应**出现 `@deepseek-ai/dsh-tools` 这类核心包（出现说明另有插件把核心带进了 profile，与本包无关，但会污染环境）。
+
+### 卸载
+
+首选**插件页 → 会话功能增强 → 移除**（管理器和 profile 清单会一起收尾）。命令行卸载会留下 `dsh.profile.bundles` 里的悬空条目，需要再到插件页清一次。
+
+## 配置
+
+每个组件的行配置写在 pack 的 `cordis.patch.yml` 里，装好后由 DSH 收进 profile 的 patch，可直接在 profile 里改。当前只有 `auto-paste` 带配置：
+
+```yaml
+- id: auto-paste
+  name: 'dsh-auto-paste'
+  config:
+    minChars: 500        # 触发阈值（字符）
+    maxBytes: 1048576    # 单次粘贴字节上限（硬顶 64 MiB）
 ```
 
-安装完成后刷新 DSH 页面或启动 Web UI 即可生效。无需编译构建，也无需重启客户端。
+`auto-paste` 的阈值也能在 **设置 → 通用 → 大段粘贴阈值** 里即时改（存到 `$DSH_HOME/auto-paste/user-config.json`）。
 
----
+## 兼容性
 
-### 本地源码安装（开发者调试）
+- DSH `0.2.1-rc.5`（桌面版 / web 端）实测通过；组件用的都是跨版本相对稳定的公开面（Loader 行、`connection` Fetch 通道、`tools` 服务、client slots）。
+- `install.ps1` 是 Windows 脚本；其他平台用上面的手动命令。
+- 浏览器半边依赖 DSH 自己的 composer 与 slots；DSH 大改版时可能需要在版本号里跟进。
 
-如果你已克隆源码到本地，直接在仓库根目录下执行：
-
-```sh
-dsh plugin --profile desktop add .
-```
-
----
-
-## 🛠️ 项目结构与本地构建
+## 仓库结构
 
 ```
 session-toolkit/
-├── package.json                 # 根级清单，声明 @funniki/dsh-session-toolkit
-├── cordis.patch.yml             # 核心 patch 编排，通过相对路径聚合 5 大组件
-├── components/                  # 5 个内置独立组件的源码
-│   ├── dsh-archived-session-delete/
-│   ├── dsh-session-move/
-│   ├── dsh-unsent-content-guard/
-│   ├── dsh-session-history-search/
-│   └── dsh-auto-paste/
-├── lib/index.js                 # 顶层入口模块
-├── locale/{zh,en}.json          # 中英文国际化多语言
-├── icon.svg                     # 套件主图标
-├── tools/build-dist.cjs         # 离线自包含 Zip 打包脚本
-├── verification/                # 自动化测试与迁移验证工具
-└── README.md                    # 项目说明文档
+├── plugin/                     # 发布产物（pack 根；zip 里就是这个目录的内容）
+│   ├── package.json            # dsh.bundle.patch → cordis.patch.yml
+│   ├── cordis.patch.yml        # 5 条 insert，每条 name 指向一个组件包
+│   ├── install.ps1             # 一键安装（6 次 dsh plugin add）
+│   ├── LICENSE / README.md / 安装说明.md
+│   ├── lib/ locale/ icon.svg   # pack 自身的空模块与显示元数据
+│   └── node_modules/dsh-*/     # 随包分发的 5 个组件（由 components/ 同步而来）
+├── components/                 # 5 个组件的源码（改这里，不要直接改 plugin/node_modules）
+├── dist/                       # 构建产物 zip（git 忽略）
+├── tools/build-release.cjs     # 同步组件 + 零依赖审计 + 打 zip
+├── verification/               # 可独立运行的验证脚本
+├── CHANGELOG.md
+└── LICENSE
 ```
 
-### 构建离线分发包
-
-在本项目根目录下运行打包脚本，会自动生成极致瘦身的离线分发 zip 包：
+## 开发与发布
 
 ```bash
-node tools/build-dist.cjs
+node tools/build-release.cjs --check              # 同步 components/ → plugin/node_modules/ 并做零依赖审计
+node tools/build-release.cjs                      # 再额外产出 dist/dsh-session-toolkit-<版本>.zip
+node verification/auto-paste-zero-dep.test.mjs    # auto-paste 宿主半边的行为测试
+node verification/verify-profile.mjs              # 装完后的体检：6 个依赖、5 条 row 能否 import、有没有核心副本
 ```
-产物位于 `dist/dsh-session-toolkit-3.0.0.zip`（~330 KB）。
 
----
+审计会拦住三类回归：包里出现带作用域的依赖、宿主半边 import 了非 `node:` 模块、浏览器半边 require 了 `react` / `@deepseek-ai/dsh-client-*` 之外的东西。
 
-## 📌 注意事项与已知边界
+> `plugin/node_modules/`（随包分发的 5 个组件副本）被 git 忽略，由上面的脚本从 `components/` 生成。所以**从仓库直接装之前先跑一次** `node tools/build-release.cjs --check`；拿 Release 里的 zip 安装则不需要，zip 里已经带好了。
 
-1. **不可逆删除**：删除归档会话属于永久抹除操作，无法找回，请谨慎操作。
-2. **热迁移时机**：会话热迁移建议在 Agent 处于非运行（空闲）状态下操作。若有正在执行的任务，建议等待执行完毕或排队等待重启后自动完成迁移。
-3. **版本兼容**：本套件组件均适配 DSH 当前的会话格式（v4 协议）。
+## 版本约定
 
----
+- `0.1.0` 是首个对外版本；
+- 修 bug 攒成一批后涨 `0.1.x`；加组件涨 `0.x.0`；
+- 详见 [CHANGELOG.md](CHANGELOG.md)。
 
-## 🤝 贡献与致谢
+## 许可证
 
-欢迎提交 Issue 反馈问题或提出新功能建议！如果你也编写了实用的 DSH 组件，欢迎提交 Pull Request 将其整合到此套件中。
-
-- 遵循 **MIT License** 开源。
+MIT，见 [LICENSE](LICENSE)。`dsh-auto-paste` 组件的浏览器半边沿用上游 [`dsh-auto-paste@0.3.2`](https://github.com/sakuraqqq/dsh-auto-paste)（MIT，作者 misakamaster）的实现结论，其许可与第三方声明见 `plugin/node_modules/dsh-auto-paste/`。

@@ -1,7 +1,6 @@
 {
   "name": "dsh-session-move",
-  "version": "1.1.1",
-  "private": true,
+  "version": "0.1.0",
   "description": "Move a stored Session to another Workspace: rewrite its header cwd, relocate its log, update Workspace accounting, with backup, verification, rollback, and a restart-retry queue.",
   "type": "module",
   "main": "lib/host.js",
@@ -30,5 +29,6 @@
         "@deepseek-ai/dsh-client-ui-workspace"
       ]
     }
-  }
+  },
+  "license": "MIT"
 }

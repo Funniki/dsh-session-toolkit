@@ -1,7 +1,6 @@
 {
   "name": "dsh-session-history-search",
-  "version": "1.2.9",
-  "private": true,
+  "version": "0.1.0",
   "description": "Keyword search across Session history messages, including Chinese substrings the built-in FTS index cannot match.",
   "type": "module",
   "main": "lib/host.js",
@@ -29,5 +28,6 @@
         "@deepseek-ai/dsh-client-ui-workspace"
       ]
     }
-  }
+  },
+  "license": "MIT"
 }

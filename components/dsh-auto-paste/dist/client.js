@@ -1,16 +1,19 @@
 // dsh-auto-paste — client half (web platform): composer paste listener.
 //
-// Self-contained bundle: the only thing it requires is `react` (a platform seed
-// word — see dsh-prompt-enhancer's generated wrapper for the same pattern), so
-// the bundle stays pure while still rendering into dsh's UI through the slots
-// registry. Registration goes through the module-table handoff exactly like
-// in-box client packages (window.__ModuleLoader__.load({ id, factory })), and
-// the factory receives the shared `require`.
+// ZERO PACKAGE DEPENDENCIES: the only module this factory requires is `react`,
+// a platform seed word every in-box client package also requires. Everything
+// else it touches is a service object handed to `apply()` (slots, sessions,
+// conversation, inputTriggers) or its own document/DOM code, so the component
+// ships without a vendor tree.
+//
+// Registration goes through the module-table handoff exactly like in-box client
+// packages (window.__ModuleLoader__.load({ id, factory })), and the factory
+// receives the shared `require`.
 //
 // Flow on a large paste into the composer:
 //   capture-phase 'paste' → text >= minChars → intercept →
-//   connection.rpc.call('/api', 'pasteStore/savePaste', { args }) →
-//   host writes <workspace>/pastes/<timestamp>.txt →
+//   POST api/auto-paste.save { text, sessionId } →
+//   host writes <workspace>/pastes/<slug>.<md|txt> →
 //   a file-path reference replaces the raw text in the composer, and a transient
 //   toast reports the outcome in the composer card's own overlay seat
 //   (conversation.input.overlay — the same place dsh's shipped input-bar toast
@@ -785,30 +788,62 @@ window.__ModuleLoader__.load({
     }
 
     /**
-     * One `pasteStore` call over the existing connection RPC, with a timeout and
-     * the gateway's ok/error envelope unwrapped. The single place the wire shape
-     * is known, so the three callers cannot drift apart; the endpoint stays a
-     * literal at each call site, so the wire name is greppable where it is used.
+     * The Host routes behind the three endpoint names the callers use below.
+     * A table rather than a query string: the call sites stay greppable by the
+     * endpoint name, and one edit here moves the whole component to new paths.
+     */
+    const PASTE_ROUTES = {
+      'pasteStore/savePaste': 'api/auto-paste.save',
+      'pasteStore/getConfig': 'api/auto-paste.config',
+      'pasteStore/setMinChars': 'api/auto-paste.threshold',
+    }
+
+    /**
+     * One Host call over the authenticated Fetch carrier, with a timeout.
+     *
+     * This is the ONLY wire-aware function in this bundle (2026-11-05 rewrite):
+     * the Host used to expose a Typert remote service called `pasteStore`, which
+     * pulled @deepseek-ai/dsh-typert-protocol — and the whole Harness core closure
+     * it drags along — into this pack. The Host now answers JSON routes on the
+     * shared `connection` carrier, the same mechanism the other session
+     * components use, so the browser needs no gateway client either. The
+     * `connection` argument is kept only so the three call sites read unchanged;
+     * the browser resolves these paths against its own document base.
+     *
+     * A non-2xx answer carries `{ error, message }`; the message is what the
+     * Settings row and the failure toast show, so it is unwrapped here once.
      */
     async function callPasteStore(connection, endpoint, args, timeoutMs) {
+      const route = PASTE_ROUTES[endpoint]
+      if (route === undefined) {
+        throw new Error(`${endpoint} failed: no Host route is registered for it`)
+      }
       const controller = new AbortController()
       const timer = setTimeout(() => controller.abort(), timeoutMs)
       try {
-        const result = await connection.rpc.call('/api', endpoint, { args }, controller.signal)
-        if (result && result.ok && result.value) return result.value
-        const detail =
-          result && result.error ? `${result.error.code}: ${result.error.message}` : 'unknown error'
-        throw new Error(`${endpoint} failed: ${detail}`)
+        const response = await fetch(route, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(args ?? {}),
+          signal: controller.signal,
+        })
+        const payload = await response.json().catch(() => null)
+        if (!response.ok) {
+          const detail =
+            payload && typeof payload.message === 'string' ? payload.message : `HTTP ${response.status}`
+          throw new Error(`${endpoint} failed: ${detail}`)
+        }
+        return payload
       } finally {
         clearTimeout(timer)
       }
     }
 
-    /** Call the host pasteStore service over the existing connection RPC. */
+    /** Ask the Host to store one paste. */
     async function savePaste(connection, sessionId, text, cwd) {
-      // The typert gateway requires every declared parameter to be present, even
-      // when its schema is optional; send '' when the session has no cwd and let
-      // the host treat it as "no cwd fallback".
+      // `cwd` is kept for call-site compatibility only: the Host resolves the
+      // workspace from its own session store and the workspace registry, which is
+      // the authority for where a session's files belong.
       const args = { text, sessionId, cwd: cwd ?? '.' }
       return callPasteStore(connection, 'pasteStore/savePaste', args, RPC_TIMEOUT_MS)
     }
@@ -1215,8 +1250,8 @@ window.__ModuleLoader__.load({
         // 0.1.7, where that field no longer exists.
         const sessionId = currentSessionId()
         if (sessionId === null) return
-        // The host reads the session's cwd from its session store; this client
-        // only sends a placeholder so the typert descriptor sees the field, then
+        // The Host reads the session's cwd from its session store; this client
+        // only sends a placeholder (the save route ignores it), then the Host
         // falls back to the registry's sessionIds routing.
         const cwd = '.'
 
