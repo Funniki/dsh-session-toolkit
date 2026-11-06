@@ -1,76 +1,51 @@
-# 🔬 验证与测试报告：会话功能增强套件 (Session Toolkit)
+# 0.1.0 发布验证
 
-本文档记录 **@funniki/dsh-session-toolkit (v3.0.0)** 的架构设计、各内置组件加载状态、自动化测试用例及迁移验证证据。
+本目录说明 `dsh-session-toolkit` 及五个组件的验证范围。历史内部版本的记录不代表当前版本的端到端验收。
 
-验证基准环境：DeepSeek Harness (DSH) `>= 0.2.1`（V4 会话日志格式协议）。
+## 发布构建与依赖审计
 
----
+从仓库根目录运行：
 
-## 1. 架构验证：Cordis 复合 Pack 机制
+```sh
+node tools/build-release.cjs
+```
 
-本套件严格遵循 DeepSeek Harness 官方 Cordis Bundle 规范（同构于官方 `@deepseek-ai/dsh-experimental-session-search`）：
+脚本先将 `components/` 同步到 `plugin/node_modules/`，再检查依赖及宿主、客户端入口，并生成 `dist/dsh-session-toolkit-0.1.0.zip`。`--check` 同样会同步组件，只是不生成 ZIP，并非只读操作。
 
-- **单条目管理**：在 `dsh.profile.bundles` 中仅注册 `dsh-session-toolkit` 一个顶层包；
-- **子组件解耦**：内置 5 个子组件以依赖形式封装在 `components/`，通过 `cordis.patch.yml` 中的 `insert` 注入 Loader；
-- **独立元数据**：每个组件的名称、描述与图标由 DSH 核心通过 `pluginPackages.metaOf(row.name, base)` 读取，独立展示且可单独开关。
+0.1.0 的发布包包含主包、五个组件、MIT 许可证和安装脚本；不包含第三方运行时依赖或 DSH 核心副本。ZIP 使用正斜杠条目路径和固定时间戳。依赖审计是静态检查，不能代替运行测试或浏览器交互验证。
 
-测试证据：详见 [`pack-evidence.json`](pack-evidence.json) 与 [`selftest-merged.json`](selftest-merged.json)。
+## 自动化行为测试
 
----
-
-## 2. 五大组件加载与槽位（Slot）验证
-
-通过 DSH 的 Loader 机制（`Config.listConfigs`）与前端 Slot 挂载点校验，5 个组件均已通过加载与交互验证：
-
-| 组件名称 | Loader Entry ID | 关联包名 | 挂载 Slot / 界面入口 | 验证状态 |
-| :--- | :--- | :--- | :--- | :--- |
-| **删除已归档会话** | `include:archived-session-delete` | `dsh-archived-session-delete` | • 归档列表悬停按钮：`delete-archived-session` (150)<br>• 会话菜单项：`delete-archived-session` (440) | ✅ Active |
-| **会话移动到工作区** | `include:session-move` | `dsh-session-move` | • 会话菜单项：`move-to-workspace` (410)<br>• 支持空闲会话热迁移与忙碌保护 | ✅ Active |
-| **未发送内容备份** | `include:unsent-content-guard` | `dsh-unsent-content-guard` | • 输入框底部 Dock：`unsent-content-guard` (order 2)<br>• 实时捕获文本与附件 | ✅ Active |
-| **长文本转附件** | `include:auto-paste` | `dsh-auto-paste` | • 输入框粘贴事件拦截与内容类型识别 (`.md` / `.txt`)<br>• 输入框 24 字预览卡片 | ✅ Active |
-| **会话历史搜索** | `include:session-history-search` | `dsh-session-history-search` | • 输入框底部 Dock：`session-history-search` (order 3)<br>• 全局弹窗：`Ctrl+Shift+K` / `shell.overlay` | ✅ Active |
-
----
-
-## 3. 核心机制自动化测试套件
-
-本目录包含用于保证套件质量与稳定性的本地测试用例：
-
-### 3.1 会话热迁移测试 (`hot-move-harness.mjs`)
-验证打开中的会话在跨工作区移动时的内存安全与句柄重定向：
-- **冷会话迁移**：搬迁会话日志与记账数据，正确移除原路径；
-- **热会话迁移**：
-  1. 调用 `sessions.flush()` 确保未持久化数据刷盘；
-  2. 重定向 `session.header` 与写入句柄到目标工作区；
-  3. 执行 `workingDirectory.set(agent, targetDir)`；
-  4. 迁移完成后再次执行 `flush()`；
-- **运行保护**：当会话处于执行中（waterfall 返回活跃 turn），自动拦截并返回 `active` 状态码，禁止热搬迁以防日志截断。
-
-执行测试：
-```bash
+```sh
+node verification/auto-paste-zero-dep.test.mjs
 node verification/hot-move-harness.mjs
 ```
 
-### 3.2 显示元数据校验 (`verify-display-meta.cjs`)
-校验主包及其下属所有组件的国际化语言包（`locale/zh.json`、`locale/en.json`）与 SVG 图标完整性。共 15 项测试全部通过（15/15 Passed）。
+- `auto-paste-zero-dep.test.mjs`：使用模拟插件上下文测试宿主模块。22 项检查涵盖内置模块引用、路由和工具定义、Markdown/文本落盘、同名避让、工作区解析、超限拒绝、阈值校验及持久化。
+- `hot-move-harness.mjs`：使用临时会话目录及模拟 registry/persistence，验证冷迁移、热迁移、dry-run、迁移前后刷盘、工作目录更新，以及运行中会话被拒绝且 header 不变。
 
-执行测试：
-```bash
-node verification/verify-display-meta.cjs
+两组测试在此次发布检查中均通过。它们不移动用户真实会话，也不证明真实浏览器中的所有交互都通过。
+
+## 安装后验证
+
+解压发布包并运行 `install.ps1` 后，在源码仓库中执行：
+
+```sh
+node verification/verify-profile.mjs --profile desktop
 ```
 
-### 3.3 自动化集成测试凭据 (`selftest-merged.json`)
-记录了合并打包后的端到端断言，包括：
-- 组件 patch 注入结构验证；
-- 组件间依赖隔离（无循环引用与全局污染）；
-- 会话历史全文搜索跳转定位能力（支持直接定位对应 turn 并高亮关键词节点）。
+该脚本检查六个依赖是否记录在同一 profile、主包是否注册为 bundle、六个宿主入口能否从 profile 根解析并实际导入，以及 profile 是否存在重复的 `@deepseek-ai/dsh-tools`。已有 profile 中的其他插件仅作信息展示，不视为本插件的依赖。
 
----
+此次发布复查中，本机 desktop profile 的主包及五个组件均为 0.1.0，全部导入通过，未发现上述核心副本。此前开发验证还使用解压包的安装脚本完成过全新 profile 安装；本次复查没有重新安装到用户的活动 profile。
 
-## 4. 演进历程与特性对齐
+## 仍需人工验收的交互
 
-- **v2.0.0**：首发版本，实现删除归档会话、工作区移动、未发送草稿守卫 3 大基础组件聚合；
-- **v2.1.0 ~ v2.1.3**：集成第 4 个组件（会话历史全文搜索），并修复消息定位与高亮跳转逻辑；
-- **v2.2.0**：集成第 5 个组件（长文本转附件），支持根据内容自动判定 Markdown 格式保存为 `.md`，输入框卡片增加 24 字开头摘要；
-- **v2.3.0 ~ v2.3.9**：组件重命名为规范的 `dsh-session-move`，实现**零停机热迁移**与完整运行保护，全面适配 DSH `>= 0.2.1`。
-- **v2.3.10**：打包与依赖瘦身剪枝，移除 vendored 依赖中的测试用例、TS 源码、声明文件及冗余嵌套副本，分发包体积从 2.98 MB 缩减至 804 KB（-73%），文件数缩减 76%。
+- 真实输入框中粘贴长文本，确认落盘、引用卡片和提示形成完整链路。
+- 插件页显示五个组件的名称、图标与运行状态，组件开关可用。
+- 会话菜单移动入口、归档删除、未发送内容恢复以及历史搜索与结果跳转。
+
+浏览器真实 Ctrl+V 到引用卡片的链路尚未在此次发布检查中完成自动化验收。宿主测试、模块导入成功与界面验收是不同的验证范围。
+
+## 历史材料
+
+`pack-evidence.json`、`selftest-merged.json`、`verify-display-meta.cjs` 及未跟踪的 probe 日志属于早期调试材料。其中可能带旧版本、旧路径或本机 profile 假设；不作为 0.1.0 五个组件全部运行或端到端通过的证明。当前源码构建与安装检查以本页列出的脚本为准。

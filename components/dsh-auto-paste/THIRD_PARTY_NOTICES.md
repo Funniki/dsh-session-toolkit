@@ -1,5 +1,17 @@
 # Third-party notices
 
+## Current release: 0.1.0
+
+This release rewrites the host half using only Node builtins. The browser half
+uses React supplied by DeepSeek Harness. It no longer contains zod,
+`dist/typert.host.js`, or the `@deepseek-ai/*` peer dependency chain described
+below. The upstream auto-paste MIT license and copyright remain in `LICENSE`.
+
+## Historical notice (superseded; retained for attribution history)
+
+The following text describes an earlier upstream build, not the contents or
+dependency requirements of this 0.1.0 release. Its license text is retained.
+
 `dsh-auto-paste` ships **no runtime dependencies** — the `dependencies` field is
 **absent** from its manifest (not merely empty). One third-party library is
 compiled into the published host artifact instead:
