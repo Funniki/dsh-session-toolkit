@@ -27,6 +27,11 @@
   pack 的依赖恰好是五个组件且版本一致、tarball 里没有 `node_modules`、图标与语言文件齐全。
 - 全绿之前不报告完成，也不让用户去拉。
 
+## 宿主兼容
+
+- 每个包必须声明 `engines.dsh`（`>=floor <ceiling`），审计会拿当前运行时校验。
+- 升级宿主前先跑 `verification/host-compat.test.mjs` 和 `verify-release.mjs --local`。
+
 ## 两个已经吃过亏的硬约束
 
 - **客户端半边加载失败是 web 启动的致命错误**：DSH 会直接崩（`web boot: N entries did not activate`），

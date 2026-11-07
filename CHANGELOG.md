@@ -1,5 +1,15 @@
 # 变更日志
 
+## 0.1.3
+
+- **每个包声明 `engines.dsh`**（`>=0.2.1-rc.5 <0.3.0`）：0.2.2 起宿主会按 `engines.dsh` / `@deepseek-ai/*` peers 判定插件兼容性，不满足默认**拒绝安装**。
+  不声明就等于"对所有未来宿主都兼容"，装上 0.3.x 会在运行时才炸。
+- **构建审计强制该字段**：必须存在、必须是 `>=floor <ceiling` 形式、必须能被当前运行时满足；版本号取自 `runtime.json`（可用 `DSH_RUNTIME_VERSION` 覆盖）。
+- 补齐 `engines.node`。
+- 新增 `verification/host-compat.test.mjs`：逐个 import 五个宿主半边并 apply，任何被移除的 API 都会在这里失败。
+- 已按 0.2.2-rc.1 全量验证：公开契约（`dsh.client`/`exports["./client"]`、客户端模块 id、`connection.fetch.register`、`tools.register`、`dsh.bundle.patch`）逐项比对无变化。
+
+
 
 ## 0.1.2-alpha1
 
