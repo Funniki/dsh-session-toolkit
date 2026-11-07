@@ -1,5 +1,13 @@
 # 变更日志
 
+
+## 0.1.4
+
+- **安装器会自己纠正半新半旧的 profile**：`dsh plugin add` 记录精确版本，所以只更新主包（或只删主包再装）会把五个组件留在旧版本。现在两个安装脚本都会先比对已声明版本，不一致就把六个一起移除再重装。
+- **安装器总是显式安装六个包**：`link:` 安装不会拉取被链接包的依赖，只装主包会让五行起不来。
+- 新增 `verification/install-paths.test.mjs`：用真实脚本装进临时 profile，覆盖全新与钉旧版两种场景、两种脚本各一遍，断言六包到位/版本正确/客户端 id 正确。已并入发布前门槛。
+- 脚本新增 `-FromRegistry` / `DSH_FROM_REGISTRY=1` 与 `-Version` / `DSH_VERSION` 开关（发布后裸名会被 pnpm 的 `minimumReleaseAge` 挡住）。
+
 ## 0.1.3
 
 - **每个包声明 `engines.dsh`**（`>=0.2.1-rc.5 <0.3.0`）：0.2.2 起宿主会按 `engines.dsh` / `@deepseek-ai/*` peers 判定插件兼容性，不满足默认**拒绝安装**。

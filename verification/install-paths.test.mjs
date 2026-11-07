@@ -162,8 +162,9 @@ try {
   }
 
   // 2. zip channel over a profile pinned at an older version — the upgrade trap.
-  const older = VERSION === '0.1.3' ? '0.1.0' : VERSION
+  const older = process.env.OLDER_VERSION ?? '0.1.3'
   const pinned = 'pinned'
+  check(older !== VERSION, `baseline ${older} differs from the version under test ${VERSION}`)
   for (const name of ALL) addPackage(name, pinned, older)
   check(ALL.every((name) => installedVersion(name, pinned) === older), `pinned profile starts at ${older}`)
   if (zipDir !== undefined) {
