@@ -23,6 +23,48 @@
 "use strict";
 
 const fs = require("node:fs");
+
+/** Semver for the dsh range check, resolved from pnpm's bundled copy. */
+function loadSemver() {
+	const candidates = [
+		process.env.DSH_SEMVER,
+		"C:/Users/G1enn/.dsh/dsh-runtimes/dsh-primary-runtime/dependencies/pnpm/dist/node_modules/semver"
+	].filter(Boolean);
+	for (const candidate of candidates) {
+		try {
+			return require(candidate);
+		} catch {
+			/* try the next one */
+		}
+	}
+	try {
+		return require("semver");
+	} catch {
+		return undefined;
+	}
+}
+
+/**
+ * The DSH runtime the audit validates against: the local runtime manifest, or
+ * `DSH_RUNTIME_VERSION` when a caller already knows it.
+ * @returns the version, or undefined when unknown.
+ */
+function runningDshVersion() {
+	const explicit = (process.env.DSH_RUNTIME_VERSION ?? "").trim();
+	if (explicit !== "") return explicit;
+	try {
+		const manifest = JSON.parse(fs.readFileSync(
+			"C:/Users/G1enn/.dsh/dsh-runtimes/dsh-primary-runtime/runtime.json",
+			"utf8"
+		));
+		return typeof manifest.desktopVersion === "string" ? manifest.desktopVersion : undefined;
+	} catch {
+		return undefined;
+	}
+}
+
+/** Every package must declare a DSH range the running host satisfies. */
+const DSH_RANGE = /^>=0\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?\s+<0\.\d+\.\d+$/;
 const path = require("node:path");
 
 const ROOT = path.resolve(__dirname, "..");
@@ -141,6 +183,7 @@ function auditComponent(name, dir) {
 	const manifest = readJson(path.join(dir, "package.json"));
 	if (manifest.name !== name) errors.push(`${name}: bundled copy declares name ${JSON.stringify(manifest.name)}`);
 	if (manifest.license !== "MIT") errors.push(`${name}: license must be MIT (got ${JSON.stringify(manifest.license)})`);
+	checkDshRange(name, manifest);
 	if (manifest.publishConfig?.access !== "public") errors.push(`${name}: publishConfig.access must be "public"`);
 
 	const hostRel = manifest.main;
@@ -188,6 +231,38 @@ function auditComponent(name, dir) {
 }
 
 /**
+ * Assert one manifest declares a `engines.dsh` range the running host satisfies.
+ * @param label component name, or "pack" for the bundle itself.
+ * @param manifest parsed package.json.
+ */
+function checkDshRange(label, manifest) {
+	const engines = manifest.engines;
+	const range = engines !== null && typeof engines === "object" ? engines.dsh : undefined;
+	if (typeof range !== "string" || range.trim() === "") {
+		errors.push(`${label}: engines.dsh is missing — declare the DSH range the plugin was verified against`);
+		return;
+	}
+	if (!DSH_RANGE.test(range.trim())) {
+		errors.push(`${label}: engines.dsh "${range}" must be ">=<floor> <ceiling>" (e.g. ">=0.2.1-rc.5 <0.3.0")`);
+	}
+	if (manifest.engines.node === undefined) errors.push(`${label}: engines.node is missing`);
+
+	const host = runningDshVersion();
+	if (host === undefined) {
+		errors.push(`${label}: cannot determine the running dsh version (set DSH_RUNTIME_VERSION)`);
+		return;
+	}
+	const semver = loadSemver();
+	if (semver === undefined) {
+		errors.push(`${label}: semver is unavailable, cannot check engines.dsh against ${host}`);
+		return;
+	}
+	if (!semver.satisfies(host, range.trim(), { includePrerelease: true })) {
+		errors.push(`${label}: engines.dsh "${range}" does not accept the running dsh ${host}`);
+	}
+}
+
+/**
  * Assert the pack bundles nothing but its own components, and that its patch
  * declares a row for each of them.
  * @param list - components from `components()`.
@@ -217,6 +292,7 @@ function auditPack(list) {
 	const pack = packManifest();
 	if (pack.name !== PACK_NAME) errors.push(`pack: name must be ${PACK_NAME} (got ${JSON.stringify(pack.name)})`);
 	if (pack.license !== "MIT") errors.push(`pack: license must be MIT (got ${JSON.stringify(pack.license)})`);
+	checkDshRange("pack", pack);
 	if (pack.private === true) errors.push("pack: package.json is still private — it cannot be published");
 	if (pack.publishConfig?.access !== "public") errors.push('pack: publishConfig.access must be "public"');
 	// The pack depends on exactly its five components and nothing else: under the

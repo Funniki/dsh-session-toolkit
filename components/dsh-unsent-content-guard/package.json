@@ -1,6 +1,6 @@
 {
   "name": "@funniki/dsh-session-toolkit-unsent-content-guard",
-  "version": "0.1.2-alpha1",
+  "version": "0.1.3",
   "description": "Keeps a durable backup of unsent composer text and image drafts, removes a copy after a successful send, and restores unsent images a Session switch or a restart dropped.",
   "license": "MIT",
   "author": "funniki",
@@ -36,5 +36,9 @@
         "@deepseek-ai/dsh-client-ui-conversation"
       ]
     }
+  },
+  "engines": {
+    "dsh": ">=0.2.1-rc.5 <0.3.0",
+    "node": "^22.19.0 || >=24.0.0"
   }
 }
