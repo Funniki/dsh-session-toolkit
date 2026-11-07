@@ -24,6 +24,9 @@
 - 结论必须对着**产物**验证，不能对着工作区：用户拿到的是 tarball / zip，不是源码。
 - 发布前：`node verification/verify-release.mjs --local`（对 `pnpm pack` 出来的 6 个 tarball 做全量检查）。
 - 发布后：`node verification/verify-release.mjs --version <版本> --tag <tag> --install`（从 registry 下载、装进临时 profile 再检查）。
+- **安装路径也必须跑**：`DSH_BIN=<dsh> node verification/install-paths.test.mjs`。它用真实安装脚本装进临时 profile，
+  覆盖「全新 profile」「组件被钉在旧版本」两种场景，两种脚本各自一遍；产物检查查不出安装器把组件漏掉，
+  0.1.3 就是这样让用户装成了「主包新版 + 组件旧版」。
 - 检查覆盖踩过的坑：浏览器半边的模块 id 必须等于包名（0.1.2 就是这里坏了）、宿主半边只 import `node:`、
   pack 的依赖恰好是五个组件且版本一致、tarball 里没有 `node_modules`、图标与语言文件齐全。
 - 全绿之前不报告完成，也不让用户去拉。

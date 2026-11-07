@@ -13,6 +13,9 @@
 #   sh install.sh                 # profile "desktop"
 #   DSH_PROFILE=web sh install.sh # another profile
 #   DSH_BIN=/path/to/dsh sh install.sh
+#   DSH_FROM_REGISTRY=1 sh install.sh   # install the published pack, not this folder
+#   DSH_VERSION=0.1.3 DSH_FROM_REGISTRY=1 sh install.sh   # pin the version (needed right
+#       after a release: pnpm holds back versions newer than its minimumReleaseAge window)
 set -eu
 
 PROFILE="${DSH_PROFILE:-desktop}"
@@ -64,10 +67,14 @@ if [ -n "$stale" ]; then
 fi
 
 # The pack: this folder when it is the extracted zip, the registry otherwise.
-if [ -f "$script_dir/cordis.patch.yml" ] && [ -f "$script_dir/package.json" ]; then
+registry_spec() {
+	if [ -n "${DSH_VERSION:-}" ]; then printf '%s@%s' "$1" "$DSH_VERSION"; else printf '%s' "$1"; fi
+}
+
+if [ -z "${DSH_FROM_REGISTRY:-}" ] && [ -f "$script_dir/cordis.patch.yml" ] && [ -f "$script_dir/package.json" ]; then
 	add "$script_dir"
 else
-	add "$PACK"
+	add "$(registry_spec "$PACK")"
 fi
 
 # The five components are always installed explicitly: a `link:` install does not pull
@@ -77,7 +84,7 @@ for component in $COMPONENTS; do
 	if [ -f "$bundled/package.json" ]; then
 		add "$bundled"
 	else
-		add "$component"
+		add "$(registry_spec "$component")"
 	fi
 done
 

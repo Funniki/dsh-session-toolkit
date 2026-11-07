@@ -145,9 +145,13 @@ node verification/verify-profile.mjs              # 装完后的体检
 发布前还要跑一遍**产物验证**（对着 `pnpm pack` 的 tarball，而不是工作区）：
 
 ```bash
-node verification/verify-release.mjs --local                       # 发布前
+node verification/verify-release.mjs --local                       # 发布前：查产物内容
+node verification/install-paths.test.mjs                           # 发布前：真跑安装脚本
 node verification/verify-release.mjs --version 0.1.2 --install    # 发布后，从 registry 回读
 ```
+
+`install-paths.test.mjs` 需要 `DSH_BIN` 指向 dsh CLI 和一份已构建的 zip：它会用真实脚本装进临时 profile，
+检查六个包是否都到位、版本是否等于目标、客户端 id 是否正确。
 
 发布到 npm（主包与五个组件）：
 

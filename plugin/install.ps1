@@ -1,7 +1,9 @@
 [CmdletBinding()]
 param(
 	[string]$Profile = "desktop",
-	[switch]$SkipChecks
+	[switch]$SkipChecks,
+	[switch]$FromRegistry,
+	[string]$Version = ""
 )
 
 # Installs the pack into one DSH profile, one command, both channels.
@@ -48,8 +50,8 @@ if (-not $dsh) {
 if (-not $dsh) {
 	throw "DeepSeek Harness CLI was not found. Install DSH or put dsh on PATH."
 }
-if (-not (Test-Path -LiteralPath (Join-Path $pluginRoot "package.json"))) {
-	throw "package.json is missing next to install.ps1."
+if (-not $FromRegistry -and -not (Test-Path -LiteralPath (Join-Path $pluginRoot "package.json"))) {
+	throw "package.json is missing next to install.ps1 (pass -FromRegistry to install the published pack instead)."
 }
 
 function Add-ProfilePackage {
@@ -61,7 +63,11 @@ function Add-ProfilePackage {
 	}
 }
 
-$thisPackage = Get-Content -LiteralPath (Join-Path $pluginRoot "package.json") -Raw | ConvertFrom-Json
+if (Test-Path -LiteralPath (Join-Path $pluginRoot "package.json")) {
+	$thisPackage = Get-Content -LiteralPath (Join-Path $pluginRoot "package.json") -Raw | ConvertFrom-Json
+} else {
+	$thisPackage = [pscustomobject]@{ version = "latest" }
+}
 
 # 0. Stale-version cleanup. `dsh plugin add` records an EXACT version, so a profile
 #    that still pins any of the six at another version keeps that version even though
@@ -82,16 +88,18 @@ if (Test-Path -LiteralPath $profileManifest) {
 		Write-Host ""
 		Write-Host "Profile pins these at another version; removing all six first:"
 		foreach ($name in $stale) { Write-Host "  $name -> $($installed.dependencies.$name)" }
-		& $dsh plugin --profile $Profile remove @($packName) + $components
+		$all = @($packName) + $components
+		& $dsh plugin --profile $Profile remove @all
 		if ($LASTEXITCODE -ne 0) { throw "dsh plugin remove failed (exit $LASTEXITCODE)." }
 	}
 }
 
 # 1. The pack: this folder when it is the extracted zip, the registry otherwise.
-if ($thisPackage.name -eq $packName) {
+if (-not $FromRegistry -and $thisPackage.name -eq $packName) {
 	Add-ProfilePackage -Target $pluginRoot
 } else {
-	Add-ProfilePackage -Target $packName
+	$target = if ($Version -ne "") { "$packName@$Version" } else { $packName }
+	Add-ProfilePackage -Target $target
 }
 
 # 2. The five components are always installed explicitly: a `link:` install does not
@@ -101,6 +109,8 @@ foreach ($component in $components) {
 	$bundled = Join-Path $pluginRoot "node_modules/$component"
 	if (Test-Path -LiteralPath (Join-Path $bundled "package.json")) {
 		Add-ProfilePackage -Target $bundled
+	} elseif ($Version -ne "") {
+		Add-ProfilePackage -Target "$component@$Version"
 	} else {
 		Add-ProfilePackage -Target $component
 	}
