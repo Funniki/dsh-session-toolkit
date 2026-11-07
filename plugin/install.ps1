@@ -12,6 +12,10 @@ param(
 # why installing the pack alone is enough now (0.1.0 needed six separate adds).
 #
 # This script therefore:
+#   0. if the profile already declares this pack or a component at a DIFFERENT
+#      version, removes all six first — `add` writes an exact version, so a profile
+#      that still pins an old component keeps that component no matter what the pack
+#      depends on (that is how an "upgrade" leaves five stale components behind);
 #   1. installs the pack (from this folder when it is the extracted zip, from the
 #      registry when it came out of npm);
 #   2. checks that all five rows are resolvable from the profile root;
@@ -57,40 +61,52 @@ function Add-ProfilePackage {
 	}
 }
 
-# 1. The pack: this folder when it is the extracted zip, the registry otherwise.
 $thisPackage = Get-Content -LiteralPath (Join-Path $pluginRoot "package.json") -Raw | ConvertFrom-Json
+
+# 0. Stale-version cleanup. `dsh plugin add` records an EXACT version, so a profile
+#    that still pins any of the six at another version keeps that version even though
+#    the pack depends on the new one. Remove all six in that case so the reinstall
+#    resolves the whole set together.
+$dshHome = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path $HOME ".dsh" }
+$profileDir = Join-Path (Join-Path $dshHome "profiles") $Profile
+$nodeModules = Join-Path $profileDir "node_modules"
+$profileManifest = Join-Path $profileDir "package.json"
+if (Test-Path -LiteralPath $profileManifest) {
+	$installed = Get-Content -LiteralPath $profileManifest -Raw | ConvertFrom-Json
+	$stale = @()
+	foreach ($name in @($packName) + $components) {
+		$declared = $installed.dependencies.$name
+		if ($null -ne $declared -and $declared -ne $thisPackage.version) { $stale += $name }
+	}
+	if ($stale.Count -gt 0) {
+		Write-Host ""
+		Write-Host "Profile pins these at another version; removing all six first:"
+		foreach ($name in $stale) { Write-Host "  $name -> $($installed.dependencies.$name)" }
+		& $dsh plugin --profile $Profile remove @($packName) + $components
+		if ($LASTEXITCODE -ne 0) { throw "dsh plugin remove failed (exit $LASTEXITCODE)." }
+	}
+}
+
+# 1. The pack: this folder when it is the extracted zip, the registry otherwise.
 if ($thisPackage.name -eq $packName) {
 	Add-ProfilePackage -Target $pluginRoot
 } else {
 	Add-ProfilePackage -Target $packName
 }
 
-$dshHome = if ($env:DSH_HOME) { $env:DSH_HOME } else { Join-Path $HOME ".dsh" }
-$profileDir = Join-Path (Join-Path $dshHome "profiles") $Profile
-$nodeModules = Join-Path $profileDir "node_modules"
-
-# 2. Do all five rows resolve from the profile root? (That is where the loader looks.)
-$missing = @()
+# 2. The five components are always installed explicitly: a `link:` install does not
+#    pull the linked package's dependencies, so relying on the pack alone leaves the
+#    rows unloadable. Bundled copies (zip) win; otherwise the registry names are used.
 foreach ($component in $components) {
-	if (-not (Test-Path -LiteralPath (Join-Path $nodeModules $component))) {
-		$missing += $component
+	$bundled = Join-Path $pluginRoot "node_modules/$component"
+	if (Test-Path -LiteralPath (Join-Path $bundled "package.json")) {
+		Add-ProfilePackage -Target $bundled
+	} else {
+		Add-ProfilePackage -Target $component
 	}
 }
 
-# 3. Fallback for a profile that is not hoisted: install each missing component.
-if ($missing.Count -gt 0) {
-	Write-Host ""
-	Write-Host "These components did not arrive with the pack (profile is not using the hoisted linker):"
-	foreach ($component in $missing) { Write-Host "  $component" }
-	foreach ($component in $missing) {
-		$bundled = Join-Path $pluginRoot "node_modules/$component"
-		if (Test-Path -LiteralPath (Join-Path $bundled "package.json")) {
-			Add-ProfilePackage -Target $bundled
-		} else {
-			Add-ProfilePackage -Target $component
-		}
-	}
-}
+# 3. Every row must be resolvable from the profile root (that is where the loader looks).
 
 if ($SkipChecks) {
 	Write-Host ""
@@ -98,11 +114,10 @@ if ($SkipChecks) {
 	return
 }
 
-$profileManifestPath = Join-Path $profileDir "package.json"
-if (-not (Test-Path -LiteralPath $profileManifestPath)) {
-	throw "Profile manifest not found: $profileManifestPath"
+if (-not (Test-Path -LiteralPath $profileManifest)) {
+	throw "Profile manifest not found: $profileManifest"
 }
-$manifest = Get-Content -LiteralPath $profileManifestPath -Raw | ConvertFrom-Json
+$manifest = Get-Content -LiteralPath $profileManifest -Raw | ConvertFrom-Json
 if (-not (($manifest.dsh.profile.bundles) -contains $packName)) {
 	throw "Profile did not register $packName as a bundle."
 }

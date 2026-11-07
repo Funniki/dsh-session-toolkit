@@ -71,6 +71,18 @@ node verification/verify-profile.mjs --profile desktop
 
 手工确认也行：插件页出现一个「会话功能增强」，点开「包含的组件」有 5 条，且都不是「未运行」。
 
+### 升级
+
+**六个包要一起换**。`dsh plugin add` 会把版本写成精确值，所以只在旧 profile 上 `add` 主包的话，五个组件会留在旧版本，出现「主包新版 + 组件旧版」的混合状态。
+
+用 `install.ps1` / `install.sh` 最省事：它会先比对已装版本，不一致就自动把六个一起移除再重装。动手的话：
+
+```bash
+for p in "" -archived-session-delete -session-move -unsent-content-guard -session-history-search -auto-paste; do
+  dsh plugin --profile desktop add "@funniki/dsh-session-toolkit$p@<版本>"
+done
+```
+
 ### 卸载
 
 首选**插件页 → 会话功能增强 → 移除**（管理器和 profile 清单会一起收尾）。命令行卸载会留下 `dsh.profile.bundles` 里的悬空条目，需要再到插件页清一次。

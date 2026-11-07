@@ -3,9 +3,11 @@
 #
 # Since 0.1.1 the pack declares the five components as its own dependencies, and
 # DSH profiles install with `nodeLinker: hoisted`, so the components land at the
-# profile ROOT — exactly where a bundle row resolves its `name`. Installing the
-# pack alone is therefore enough; this script only verifies that, and falls back
-# to adding a component explicitly when a profile is not hoisted.
+# profile ROOT — exactly where a bundle row resolves its `name`.
+#
+# `dsh plugin add` records an EXACT version, so a profile that still pins one of the
+# six at an older version keeps it even though the pack depends on the new one. When
+# that is detected, all six are removed first and reinstalled as a set.
 #
 # Usage:
 #   sh install.sh                 # profile "desktop"
@@ -38,6 +40,29 @@ add() {
 	"$dsh" plugin --profile "$PROFILE" add "$1"
 }
 
+dsh_home="${DSH_HOME:-$HOME/.dsh}"
+profile_dir="$dsh_home/profiles/$PROFILE"
+node_modules="$profile_dir/node_modules"
+profile_manifest="$profile_dir/package.json"
+
+target_version=$(sed -n 's/^[[:space:]]*"version":[[:space:]]*"\([^"]*\)".*/\1/p' "$script_dir/package.json" | head -1)
+
+# 0. Stale-version cleanup: an exact pinned component would survive the reinstall.
+stale=""
+if [ -f "$profile_manifest" ]; then
+	for name in "$PACK" $COMPONENTS; do
+		declared=$(sed -n "s|^[[:space:]]*\"$name\":[[:space:]]*\"\([^\"]*\)\".*|\1|p" "$profile_manifest" | head -1)
+		if [ -n "$declared" ] && [ "$declared" != "$target_version" ]; then
+			stale="$stale $name"
+		fi
+	done
+fi
+if [ -n "$stale" ]; then
+	printf '\nProfile pins these at another version; removing all six first:\n'
+	for name in $stale; do printf '  %s\n' "$name"; done
+	"$dsh" plugin --profile "$PROFILE" remove $PACK $COMPONENTS
+fi
+
 # The pack: this folder when it is the extracted zip, the registry otherwise.
 if [ -f "$script_dir/cordis.patch.yml" ] && [ -f "$script_dir/package.json" ]; then
 	add "$script_dir"
@@ -45,34 +70,27 @@ else
 	add "$PACK"
 fi
 
-dsh_home="${DSH_HOME:-$HOME/.dsh}"
-profile_dir="$dsh_home/profiles/$PROFILE"
-node_modules="$profile_dir/node_modules"
-
-if [ ! -f "$profile_dir/package.json" ]; then
-	printf 'error: profile "%s" has no package.json (%s)\n' "$PROFILE" "$profile_dir" >&2
-	exit 1
-fi
-
-# Did all five rows land where the loader looks for them?
-missing=""
+# The five components are always installed explicitly: a `link:` install does not pull
+# the linked package's dependencies, so the pack alone leaves the rows unloadable.
 for component in $COMPONENTS; do
-	if [ ! -d "$node_modules/$component" ]; then
-		missing="$missing $component"
+	bundled="$script_dir/node_modules/$component"
+	if [ -f "$bundled/package.json" ]; then
+		add "$bundled"
+	else
+		add "$component"
 	fi
 done
 
-# Fallback for a profile that is not using the hoisted linker.
-if [ -n "$missing" ]; then
-	printf '\nThese components did not arrive with the pack (profile is not hoisted):\n'
-	for component in $missing; do printf '  %s\n' "$component"; done
-	for component in $missing; do
-		add "$component"
-	done
-fi
+# Every row must be resolvable from the profile root (that is where the loader looks).
+for component in $COMPONENTS; do
+	if [ ! -d "$node_modules/$component" ]; then
+		printf 'error: component did not install: %s\n' "$component" >&2
+		exit 1
+	fi
+done
 
 # The pack must be registered as a bundle, and no Harness core copy may appear.
-if ! grep -q '@funniki/dsh-session-toolkit' "$profile_dir/package.json"; then
+if ! grep -q '@funniki/dsh-session-toolkit' "$profile_manifest"; then
 	printf 'error: the profile did not record the pack as a bundle.\n' >&2
 	exit 1
 fi
