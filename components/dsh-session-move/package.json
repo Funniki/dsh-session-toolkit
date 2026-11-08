@@ -1,6 +1,6 @@
 {
   "name": "@funniki/dsh-session-toolkit-session-move",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Move a stored Session to another Workspace: rewrite its header cwd, relocate its log, update Workspace accounting, with backup, verification, rollback, and a restart-retry queue.",
   "license": "MIT",
   "author": "funniki",

@@ -1,8 +1,8 @@
-# 会话功能增强 · dsh-session-toolkit 0.1.0
+# 会话功能增强 · dsh-session-toolkit 0.1.5
 
 给 DeepSeek Harness 增加五个会话与输入功能。插件列表中显示一个「会话功能增强」条目，五个组件保留各自的名称、图标和开关。
 
-主包和五个组件均为 **0.1.0**，不附带 `@deepseek-ai/*`、`zod` 等第三方运行时依赖。宿主端使用 Node 内置模块，浏览器端使用 DSH 提供的 React。
+主包和五个组件均为 **0.1.5**，不附带 `@deepseek-ai/*`、`zod` 等第三方运行时依赖。宿主端使用 Node 内置模块，浏览器端使用 DSH 提供的 React。
 
 | 组件 | 用途 |
 |---|---|
@@ -16,7 +16,7 @@
 
 **必须把主包和五个组件都安装到同一个 DSH profile。** 只添加外层目录不会自动安装五个组件，会出现「未运行」或 `Cannot find package`。
 
-1. 从 [GitHub Releases](https://github.com/Funniki/dsh-session-toolkit/releases) 下载 `dsh-session-toolkit-0.1.0.zip`。
+1. 从 [GitHub Releases](https://github.com/Funniki/dsh-session-toolkit/releases) 下载 `dsh-session-toolkit-0.1.5.zip`。
 2. 解压到固定目录，进入包含本说明、`package.json` 和 `install.ps1` 的那一层。
 3. Windows 下运行：
 

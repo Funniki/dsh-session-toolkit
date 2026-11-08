@@ -1,6 +1,6 @@
 {
   "name": "@funniki/dsh-session-toolkit-auto-paste",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "长文粘贴自动保存为工作区附件：按内容自动选择 .md 或 .txt，输入框只留一张带开头预览的引用卡片。零依赖重写版：宿主只 import node: 内置模块，浏览器端只 require react，不引入任何 @deepseek-ai 包。",
   "license": "MIT",
   "author": "funniki",

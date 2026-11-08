@@ -235,6 +235,35 @@ function auditComponent(name, dir) {
  * @param label component name, or "pack" for the bundle itself.
  * @param manifest parsed package.json.
  */
+/**
+ * Assert the user-facing docs state the version that actually ships.
+ * Docs drifted for four releases (README still said 0.1.0 while npm was on 0.1.4),
+ * which is why this is checked by the build instead of by memory.
+ * @param version the version every package declares.
+ */
+function checkDocVersions(version) {
+	const expectations = [
+		["README.md", /当前版本 \*\*([0-9]+\.[0-9]+\.[0-9]+)\*\*/],
+		["plugin/README.md", /dsh-session-toolkit ([0-9]+\.[0-9]+\.[0-9]+)/],
+		["plugin/安装说明.md", /当前版本 `([0-9]+\.[0-9]+\.[0-9]+)`/]
+	];
+	for (const [file, pattern] of expectations) {
+		let contents;
+		try {
+			contents = fs.readFileSync(path.join(ROOT, file), "utf8");
+		} catch {
+			errors.push(`${file}: cannot be read`);
+			continue;
+		}
+		const match = pattern.exec(contents);
+		if (match === null) {
+			errors.push(`${file}: does not state the version — add a "当前版本 ${version}" marker`);
+		} else if (match[1] !== version) {
+			errors.push(`${file}: states ${match[1]} but the packages are ${version}`);
+		}
+	}
+}
+
 function checkDshRange(label, manifest) {
 	const engines = manifest.engines;
 	const range = engines !== null && typeof engines === "object" ? engines.dsh : undefined;
@@ -293,6 +322,7 @@ function auditPack(list) {
 	if (pack.name !== PACK_NAME) errors.push(`pack: name must be ${PACK_NAME} (got ${JSON.stringify(pack.name)})`);
 	if (pack.license !== "MIT") errors.push(`pack: license must be MIT (got ${JSON.stringify(pack.license)})`);
 	checkDshRange("pack", pack);
+	checkDocVersions(pack.version);
 	if (pack.private === true) errors.push("pack: package.json is still private — it cannot be published");
 	if (pack.publishConfig?.access !== "public") errors.push('pack: publishConfig.access must be "public"');
 	// The pack depends on exactly its five components and nothing else: under the
@@ -304,10 +334,22 @@ function auditPack(list) {
 	if (declared.join("|") !== expectedComponents.join("|")) {
 		errors.push(`pack: dependencies must be exactly its five components (got ${declared.join(", ") || "none"})`);
 	}
+	const semver = loadSemver();
 	for (const component of list) {
 		const range = dependencies[component.name];
-		if (range !== undefined && !range.includes(component.version)) {
-			errors.push(`pack: dependency range ${range} for ${component.name} does not include ${component.version}`);
+		if (range === undefined) continue;
+		if (semver === undefined) {
+			errors.push("pack: semver is unavailable, cannot check the component dependency ranges");
+			break;
+		}
+		let satisfied = false;
+		try {
+			satisfied = semver.satisfies(component.version, range, { includePrerelease: true });
+		} catch {
+			satisfied = false;
+		}
+		if (!satisfied) {
+			errors.push(`pack: dependency range ${range} for ${component.name} does not resolve ${component.version}`);
 		}
 	}
 	if (!fs.existsSync(path.join(PLUGIN, "LICENSE"))) errors.push("pack: LICENSE is missing");

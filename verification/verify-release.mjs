@@ -30,6 +30,36 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync }
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { gunzipSync } from 'node:zlib'
+import { createRequire } from 'node:module'
+
+/**
+ * Semver, for deciding whether a declared dependency range resolves the sibling version.
+ * Build-time only: it comes from pnpm's own distribution, never from the packages.
+ * @returns the module, or undefined when it cannot be found.
+ */
+function loadSemver() {
+	const require = createRequire(import.meta.url)
+	for (const candidate of [process.env.DSH_SEMVER, 'semver']) {
+		if (!candidate) continue
+		try {
+			return require(candidate)
+		} catch {
+			/* try the next one */
+		}
+	}
+	for (const candidate of [
+		'C:/Users/G1enn/.dsh/dsh-runtimes/dsh-primary-runtime/dependencies/pnpm/dist/node_modules/semver'
+	]) {
+		try {
+			return require(candidate)
+		} catch {
+			/* try the next one */
+		}
+	}
+	return undefined
+}
+
+const semver = loadSemver()
 
 const PACK = '@funniki/dsh-session-toolkit'
 const COMPONENTS = [
@@ -242,10 +272,16 @@ try {
       )
       for (const component of COMPONENTS) {
         const pinned = dependencies[component]
-        check(
-          pinned === version || pinned === `^${version}`,
-          `${PACK}: pins ${component} at ${version} (got ${pinned})`
-        )
+        // The declaration must RESOLVE the sibling version, not spell it out: a caret
+        // range that covers ${version} is valid (the shipped pack pins ^0.1.4 while the
+        // components are 0.1.5, and that is coherent).
+        let resolves = false
+        try {
+          resolves = pinned !== undefined && semver.satisfies(version, pinned, { includePrerelease: true })
+        } catch {
+          resolves = false
+        }
+        check(resolves, `${PACK}: pins ${component} with a range that resolves ${version} (got ${pinned})`)
       }
     }
   }

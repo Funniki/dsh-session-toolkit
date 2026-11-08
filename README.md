@@ -4,7 +4,7 @@
 
 **一个插件包（pack）+ 五个组件，零第三方依赖** —— 整个包只用到 Node 内置模块和 DSH 页面自带的 `react`，不往里塞任何 `@deepseek-ai/*` 副本。
 
-当前版本 **0.1.0**，两个渠道都已上线：npm 上是 `@funniki/dsh-session-toolkit` 及五个 `@funniki/dsh-session-toolkit-*` 组件包；GitHub Release 上是同名 zip。
+当前版本 **0.1.5**，两个渠道都已上线：npm 上是 `@funniki/dsh-session-toolkit` 及五个 `@funniki/dsh-session-toolkit-*` 组件包；GitHub Release 上是同名 zip。
 
 | 组件包 | 显示名 | 做什么 | 出现在 |
 |---|---|---|---|
@@ -21,7 +21,7 @@
 （`cordis.patch.yml` 里每条的 `name`）解析包名的地方。所以下面任选一种就能装齐六个包：
 
 - 插件页「添加插件」只填 `@funniki/dsh-session-toolkit`；
-- 命令行 `dsh plugin --profile desktop add @funniki/dsh-session-toolkit`。
+- 命令行 `dsh plugin --profile desktop add` 加六个包（见下方「渠道 B」，**不能只写主包**）。
 
 装完五行会自动激活。0.1.0 没有声明依赖，所以那时必须手动装 6 个；0.1.1 把这件事收进了依赖声明。
 
@@ -53,11 +53,13 @@
 ### 渠道 B：npm
 
 ```bash
-dsh plugin --profile desktop add @funniki/dsh-session-toolkit
+dsh plugin --profile desktop add @funniki/dsh-session-toolkit@0.1.5 @funniki/dsh-session-toolkit-archived-session-delete@0.1.5 @funniki/dsh-session-toolkit-session-move@0.1.5 @funniki/dsh-session-toolkit-unsent-content-guard@0.1.5 @funniki/dsh-session-toolkit-session-history-search@0.1.5 @funniki/dsh-session-toolkit-auto-paste@0.1.5
 ```
 
-> `dsh plugin` 是 `pnpm` 的转发器；这条命令会把五个组件作为 pack 的依赖一起装好。
-> 手工补装可以逐条 `add` 五个组件，但不是必需的。
+> **六个包要一起写出来。** 只 `add` 主包时，五个组件走的是 pack 声明的 `^0.1.4` 区间，
+> 而 DSH 的 `minimumReleaseAge` 供应链策略会挡住刚发布不久的版本，于是解析到旧版本 ——
+> 实测会装成 0.1.4（已废弃的坏版本）。显式指定每个包，DSH 才会为它们写入放行条目。
+> 用 `install.ps1` / `install.sh` 就自动是这样，不必手打。
 
 ### 装完怎么确认
 
@@ -147,7 +149,7 @@ node verification/verify-profile.mjs              # 装完后的体检
 ```bash
 node verification/verify-release.mjs --local                       # 发布前：查产物内容
 node verification/install-paths.test.mjs                           # 发布前：真跑安装脚本
-node verification/verify-release.mjs --version 0.1.2 --install    # 发布后，从 registry 回读
+node verification/verify-release.mjs --version 0.1.5 --install    # 发布后，从 registry 回读
 ```
 
 `install-paths.test.mjs` 需要 `DSH_BIN` 指向 dsh CLI 和一份已构建的 zip：它会用真实脚本装进临时 profile，

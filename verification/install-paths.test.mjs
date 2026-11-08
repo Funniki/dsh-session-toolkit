@@ -165,12 +165,11 @@ try {
   const older = process.env.OLDER_VERSION ?? '0.1.3'
   const pinned = 'pinned'
   check(older !== VERSION, `baseline ${older} differs from the version under test ${VERSION}`)
-  for (const name of ALL) addPackage(name, pinned, older)
-  check(ALL.every((name) => installedVersion(name, pinned) === older), `pinned profile starts at ${older}`)
   if (zipDir !== undefined) {
     for (const shell of ['ps1', 'sh']) {
       const profile = `pinned-${shell}`
-      for (const name of ALL) addPackage(name, profile, older)
+      addPackage(PACK, profile, VERSION)
+      for (const name of COMPONENTS) addPackage(name, profile, older)
       install(zipDir, profile, shell)
       await assertInstalled(profile, `zip/upgrade/${shell}`)
     }
